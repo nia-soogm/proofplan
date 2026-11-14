@@ -1,0 +1,249 @@
+{
+ "split": "held-out test (by drawing / by project)",
+ "rows": [
+  {
+   "family": "cubicasa5k/count",
+   "n": 44350,
+   "acc": 29.5,
+   "acc_ans": 94.6,
+   "abstain": 68.9,
+   "first_acc": 29.5,
+   "first_n": 44350,
+   "note": "room labels (OCR v2 incl. rotated text, FI/SV lexicon, summary) + dev-trained gate; storeys by layout split + dev-trained gate; WC seats by CPU symbol detector + gate; doors, windows, sinks, showers abstain"
+  },
+  {
+   "family": "ifc_bench/text",
+   "n": 477,
+   "acc": 18.0,
+   "acc_ans": 47.5,
+   "abstain": 62.1,
+   "first_acc": 17.8,
+   "first_n": 477,
+   "note": "IfcOpenShell template answers (no LLM), strict scorer; dev-tuned gate; current = after seeing test (scope guards)"
+  },
+  {
+   "family": "ifc_models/area",
+   "n": 1490,
+   "acc": 100.0,
+   "acc_ans": 100.0,
+   "abstain": 0.0,
+   "first_acc": 100.0,
+   "first_n": 300,
+   "note": "IfcSpace Qto / geometry; plan cross-check"
+  },
+  {
+   "family": "ifc_models/count",
+   "n": 328,
+   "acc": 100.0,
+   "acc_ans": 100.0,
+   "abstain": 0.0,
+   "first_acc": 90.0,
+   "first_n": 300,
+   "note": "IFC elements; first run 90% \u2192 fixes informed by test"
+  },
+  {
+   "family": "ifc_models/length",
+   "n": 22,
+   "acc": 100.0,
+   "acc_ans": 100.0,
+   "abstain": 0.0,
+   "first_acc": 100.0,
+   "first_n": 22,
+   "note": ""
+  },
+  {
+   "family": "ifc_models/volume",
+   "n": 42,
+   "acc": 100.0,
+   "acc_ans": 100.0,
+   "abstain": 0.0,
+   "first_acc": 100.0,
+   "first_n": 42,
+   "note": ""
+  },
+  {
+   "family": "opening_design/count",
+   "n": 17,
+   "acc": 88.2,
+   "acc_ans": 93.8,
+   "abstain": 5.9,
+   "first_acc": 64.7,
+   "first_n": 17,
+   "note": "rotated schedule tables; fixes informed by test"
+  },
+  {
+   "family": "opening_design/text",
+   "n": 3,
+   "acc": 100.0,
+   "acc_ans": 100.0,
+   "abstain": 0.0,
+   "first_acc": 33.3,
+   "first_n": 3,
+   "note": "lenient text match; n=3"
+  },
+  {
+   "family": "swiss_dwellings/area",
+   "n": 5798,
+   "acc": 99.6,
+   "acc_ans": 99.6,
+   "abstain": 0.0,
+   "first_acc": 99.0,
+   "first_n": 300,
+   "note": "DXF polygons, PDF fill cross-check"
+  },
+  {
+   "family": "swiss_dwellings/count",
+   "n": 12364,
+   "acc": 100.0,
+   "acc_ans": 100.0,
+   "abstain": 0.0,
+   "first_acc": 100.0,
+   "first_n": 300,
+   "note": "DXF blocks/rooms"
+  }
+ ],
+ "all": {
+  "n": 64891,
+  "acc": 51.1,
+  "answered": 34056,
+  "acc_ans": 97.4,
+  "abstain": 47.5
+ },
+ "cubicasa_kinds": [
+  {
+   "kind": "balcony",
+   "n": 1492,
+   "acc": 40.2,
+   "answered": 622,
+   "acc_ans": 96.5,
+   "abstain": 58.3
+  },
+  {
+   "kind": "bathroom",
+   "n": 2436,
+   "acc": 51.1,
+   "answered": 1324,
+   "acc_ans": 94.1,
+   "abstain": 45.6
+  },
+  {
+   "kind": "bedroom",
+   "n": 3098,
+   "acc": 27.1,
+   "answered": 886,
+   "acc_ans": 94.8,
+   "abstain": 71.4
+  },
+  {
+   "kind": "door",
+   "n": 3666,
+   "acc": 0.0,
+   "answered": 0,
+   "acc_ans": 0.0,
+   "abstain": 100.0
+  },
+  {
+   "kind": "kitchen",
+   "n": 3386,
+   "acc": 77.1,
+   "answered": 2670,
+   "acc_ans": 97.8,
+   "abstain": 21.1
+  },
+  {
+   "kind": "sauna",
+   "n": 3434,
+   "acc": 33.7,
+   "answered": 1262,
+   "acc_ans": 91.8,
+   "abstain": 63.2
+  },
+  {
+   "kind": "shower_bath",
+   "n": 4604,
+   "acc": 0.0,
+   "answered": 0,
+   "acc_ans": 0.0,
+   "abstain": 100.0
+  },
+  {
+   "kind": "sink",
+   "n": 4930,
+   "acc": 0.0,
+   "answered": 0,
+   "acc_ans": 0.0,
+   "abstain": 100.0
+  },
+  {
+   "kind": "storey",
+   "n": 4990,
+   "acc": 85.2,
+   "answered": 4456,
+   "acc_ans": 95.4,
+   "abstain": 10.7
+  },
+  {
+   "kind": "wc",
+   "n": 2340,
+   "acc": 41.2,
+   "answered": 1066,
+   "acc_ans": 90.4,
+   "abstain": 54.4
+  },
+  {
+   "kind": "wc_seat",
+   "n": 4984,
+   "acc": 28.0,
+   "answered": 1526,
+   "acc_ans": 91.3,
+   "abstain": 69.4
+  },
+  {
+   "kind": "window",
+   "n": 4990,
+   "acc": 0.0,
+   "answered": 0,
+   "acc_ans": 0.0,
+   "abstain": 100.0
+  }
+ ],
+ "cubicasa_rooms": {
+  "phase1_first_run": {
+   "n": 16186,
+   "answered": 5138,
+   "acc": 28.5,
+   "acc_ans": 89.6,
+   "abstain": 68.3
+  },
+  "first_run": {
+   "n": 16186,
+   "answered": 7830,
+   "acc": 45.8,
+   "acc_ans": 94.7,
+   "abstain": 51.6
+  }
+ },
+ "ifc_bench": {
+  "first_run": {
+   "n": 477,
+   "acc": 17.8,
+   "answered": 204,
+   "acc_ans": 41.7,
+   "abstain": 57.2
+  },
+  "current": {
+   "n": 477,
+   "acc": 18.0,
+   "answered": 181,
+   "acc_ans": 47.5,
+   "abstain": 62.1
+  },
+  "dev": {
+   "n": 343,
+   "acc": 50.1,
+   "answered": 205,
+   "acc_ans": 83.9,
+   "abstain": 40.2
+  }
+ }
+}

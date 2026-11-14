@@ -1,0 +1,60 @@
+{
+ "swiss_pdf": {
+  "files": 1040,
+  "vector_text": 1040,
+  "has_images": 0,
+  "has_area_labels(m\u00b2)": 307,
+  "has_room_numbers": 1030,
+  "median_words": 125,
+  "lang": {
+   "de": 698,
+   "it": 95,
+   "other": 247
+  }
+ },
+ "swiss_dxf_200files": {
+  "ANNOTATION:TEXT": 800,
+  "DOOR:ARC": 7169,
+  "DOOR:LWPOLYLINE": 13988,
+  "FIXTURE:CIRCLE": 5579,
+  "FIXTURE:LWPOLYLINE": 13469,
+  "ROOM_OUTLINE:LWPOLYLINE": 11125,
+  "ROOM_TEXT:TEXT": 13793,
+  "UNIT_OUTLINE:LWPOLYLINE": 740,
+  "WALL:HATCH": 8257,
+  "WALL:LWPOLYLINE": 9699,
+  "WINDOW:LWPOLYLINE": 11241
+ },
+ "ifc_pdf": {
+  "plan:vector_text": 71,
+  "plan:has_images": 0,
+  "elev/section:vector_text": 36,
+  "elev/section:has_images": 0
+ },
+ "ifc_plan_svg_classes": {
+  "IfcWallStandardCase": 3831,
+  "IfcSpace": 1363,
+  "IfcWindow": 1225,
+  "IfcBuildingElementPart": 1211,
+  "IfcWall": 1101,
+  "IfcDoor": 1063,
+  "IfcColumn": 990,
+  "IfcRailing": 446,
+  "IfcMember": 188,
+  "IfcStair": 79,
+  "IfcStairFlight": 32,
+  "IfcSlab": 30,
+  "IfcFurnishingElement": 12,
+  "IfcSite": 8,
+  "IfcPlate": 6,
+  "IfcRoof": 6,
+  "IfcFlowTerminal": 3,
+  "IfcDistributionControlElement": 1,
+  "IfcTransportElement": 1,
+  "IfcRamp": 1
+ },
+ "ifc_files": {
+  "ifc": 533,
+  "models_with_plans": 14
+ }
+}

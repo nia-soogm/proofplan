@@ -1,0 +1,14 @@
+pymupdf>=1.24
+fastapi
+uvicorn
+requests
+playwright
+ezdxf>=1.3
+ifcopenshell>=0.8
+shapely>=2.0
+numpy
+pillow
+rapidocr-onnxruntime>=1.2   # CubiCasa OCR baseline (CPU, no key)
+opencv-python-headless
+scikit-learn>=1.5   # CubiCasa storey/symbol gates (dev-trained, CPU)
+pytest

@@ -1,0 +1,14 @@
+split=test  n_per_family<=300  seconds=14
+family                          n     acc  answered  acc|ans  abstain
+cubicasa5k/count              300    0.0%         0     0.0%   100.0%
+ifc_bench/text                300    0.0%         0     0.0%   100.0%
+ifc_models/area               300  100.0%       300   100.0%     0.0%
+ifc_models/count              300  100.0%       300   100.0%     0.0%
+ifc_models/length              22  100.0%        22   100.0%     0.0%
+ifc_models/volume              42  100.0%        42   100.0%     0.0%
+opening_design/area             9    0.0%         0     0.0%   100.0%
+opening_design/count           39    0.0%         0     0.0%   100.0%
+opening_design/text            16    0.0%         0     0.0%   100.0%
+swiss_dwellings/area          300   99.0%       300    99.0%     0.0%
+swiss_dwellings/count         300  100.0%       300   100.0%     0.0%
+ALL (sampled)                1928   65.4%      1264    99.8%    34.4%

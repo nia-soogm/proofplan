@@ -1,0 +1,205 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ProofPlan — answers you can check on the drawing</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font:14px/1.45 system-ui,sans-serif;display:flex;height:100vh;color:#1d2433;background:#f4f5f7}
+#left{width:430px;min-width:430px;padding:16px;overflow:auto;background:#fff;border-right:1px solid #dde}
+h1{font-size:18px;margin:0 0 2px} .sub{color:#667;font-size:12px;margin-bottom:12px}
+select,textarea,button{font:inherit} select{width:100%;padding:6px;margin-bottom:8px}
+textarea{width:100%;height:64px;padding:8px;border:1px solid #ccd;border-radius:6px;resize:vertical}
+button{background:#1f5eff;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;margin-top:6px}
+.chips{margin:8px 0 12px} .chip{display:inline-block;background:#eef2ff;color:#2a3b8f;border-radius:12px;padding:3px 9px;margin:3px 4px 0 0;cursor:pointer;font-size:12px}
+#answer{padding:12px;border-radius:8px;background:#f7f9fc;border:1px solid #e3e7ef;min-height:60px;white-space:pre-wrap}
+#answer.conflict{background:#fff4f2;border-color:#f3b4a8} #answer.abstain{background:#fffbea;border-color:#f0d98a}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;margin-bottom:6px}
+.b-answered{background:#dff5e3;color:#17652b}.b-conflict{background:#fde0db;color:#a3261a}.b-abstain{background:#fdf1c4;color:#7a5b00}
+a.cite{color:#1f5eff;font-weight:600;text-decoration:none;cursor:pointer} a.cite:hover{text-decoration:underline}
+#evlist{margin-top:10px;font-size:12px} .ev{padding:4px 6px;border-radius:4px;cursor:pointer;display:flex;gap:6px}
+.ev:hover,.ev.sel{background:#eef2ff} .ev b{min-width:26px} .ev .k{color:#889}
+details{margin-top:10px;font-size:12px;color:#556} pre{white-space:pre-wrap;font-size:11px;background:#f6f6f8;padding:6px;border-radius:4px}
+#right{flex:1;display:flex;flex-direction:column;min-width:0}
+#bar{padding:8px 12px;background:#fff;border-bottom:1px solid #dde;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#bar .tab{padding:3px 9px;border-radius:5px;background:#eef0f4;cursor:pointer;font-size:12px}
+#bar .tab.on{background:#1d2433;color:#fff} #zoomctl{margin-left:auto} #zoomctl button{padding:3px 9px;margin:0}
+#viewport{flex:1;overflow:auto;position:relative;background:#c9ccd3}
+#sheet{position:relative;transform-origin:0 0;margin:0}
+#sheet img{display:block;user-select:none}
+.box{position:absolute;border:2.5px solid #ff2d55;background:rgba(255,45,85,.12);cursor:pointer}
+.box.conf{border-color:#ff8a00;background:rgba(255,138,0,.18)} .box.sel{border-color:#00b3ff;background:rgba(0,179,255,.18);box-shadow:0 0 0 4px rgba(0,179,255,.35)}
+.box span{position:absolute;left:-2px;top:-17px;background:#ff2d55;color:#fff;font:600 11px/15px system-ui;padding:0 4px;border-radius:3px;white-space:nowrap}
+.box.conf span{background:#ff8a00} .box.sel span{background:#00b3ff}
+.box.vok{border-color:#16a34a;background:rgba(22,163,74,.10)} .box.vok span{background:#16a34a}
+.box.vbad{border-color:#dc2626;background:rgba(220,38,38,.14)} .box.vbad span{background:#dc2626}
+.box.poly{background:transparent;border-style:dashed;border-width:1.5px}
+#polys{position:absolute;left:0;top:0;pointer-events:none}
+#polys polygon{fill:rgba(22,163,74,.18);stroke:#16a34a;stroke-width:3} #polys polygon.vbad{fill:rgba(220,38,38,.18);stroke:#dc2626}
+#polys polygon.vnone{fill:rgba(31,94,255,.15);stroke:#1f5eff} #polys polygon.sel{stroke:#00b3ff;stroke-width:6}
+#credit{padding:5px 12px;font-size:11px;color:#445;background:#fff;border-top:1px solid #dde;max-height:48px;overflow:auto}
+.gold{color:#17652b;font-weight:600} .ev .v{min-width:14px} .legend{font-size:11px;color:#556;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 3px 0 8px;vertical-align:-1px}
+#home{position:fixed;inset:0;background:#f4f5f7;z-index:50;overflow:auto;display:none}
+#home .wrap{max-width:1180px;margin:0 auto;padding:36px 28px}
+.brand{font-weight:800;letter-spacing:-.5px} .brand b{color:#1f5eff}
+#home h1{font-size:34px;margin:0} #home .tag{color:#556;font-size:16px;margin:6px 0 24px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:#fff;border:1px solid #dde;border-radius:10px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.card:hover{border-color:#1f5eff;box-shadow:0 2px 10px rgba(31,94,255,.12)}
+.card h3{margin:0;font-size:15px} .card .lic{font-size:11px;color:#667} .card .st{font-size:12px;color:#334}
+.card .big{font-size:22px;font-weight:700;color:#17652b} .card .big.lo{color:#7a5b00}
+table.acc{border-collapse:collapse;width:100%;background:#fff;font-size:12.5px;margin-top:8px}
+table.acc th,table.acc td{border-bottom:1px solid #e3e7ef;padding:5px 8px;text-align:right} table.acc th{background:#f0f2f7}
+table.acc td:first-child,table.acc th:first-child,table.acc td.l{text-align:left}
+table.acc td.note{color:#667;text-align:left;font-size:11.5px}
+.acc-h{margin:28px 0 2px;font-size:18px} .muted{color:#667;font-size:12px}
+#accmodal{position:fixed;inset:0;background:rgba(20,24,35,.45);z-index:60;display:none;align-items:center;justify-content:center}
+#accmodal .in{background:#f7f8fa;border-radius:10px;padding:18px;max-width:980px;max-height:88vh;overflow:auto}
+.toplinks{font-size:12px;margin-bottom:10px} .toplinks a{color:#1f5eff;cursor:pointer;margin-right:12px}
+</style></head><body>
+<div id="home"><div class="wrap">
+  <h1 class="brand">Proof<b>Plan</b></h1>
+  <div class="tag">Ask a question about a drawing set. Every answer cites the boxes on the sheet it came from, a second source cross-checks it, and when the evidence is weak it says <i>not sure</i> instead of guessing.</div>
+  <div class="cards" id="cards"></div>
+  <div class="legend" style="margin-top:14px;font-size:12px">Evidence boxes:<i style="background:#16a34a"></i>green = a second source agrees (e.g. DXF vs PDF fill, IFC model vs plan, room labels vs apartment summary)<i style="background:#dc2626"></i>red = disagrees / not found<i style="background:#1f5eff"></i>blue = single source, unchecked</div>
+  <h2 class="acc-h">Accuracy on held-out drawings</h2><div id="acctab"></div>
+</div></div>
+<div id="accmodal"><div class="in"><div style="display:flex;justify-content:space-between"><b>ProofPlan accuracy (held-out)</b><a style="cursor:pointer;color:#1f5eff" onclick="$('#accmodal').style.display='none'">close ✕</a></div><div id="acctab2"></div></div></div>
+<div id="left">
+  <h1 class="brand">Proof<b>Plan</b></h1><div class="sub">Answers cite boxes on the drawing — click [n] to jump. <span id="engine"></span></div>
+  <div class="toplinks"><a onclick="goHome()">← all projects</a><a onclick="showAcc()">accuracy</a></div>
+  <select id="project"></select>
+  <select id="file" style="display:none"></select>
+  <textarea id="q" placeholder="Ask about the drawings… e.g. How many doors are on the main floor?"></textarea>
+  <button id="go">Ask</button>
+  <div class="chips" id="chips"></div>
+  <div id="answer">—</div>
+  <div class="legend" id="legend" style="display:none">Boxes:<i style="background:#16a34a"></i>verified by 2nd source<i style="background:#dc2626"></i>disagrees / not found<i style="background:#1f5eff"></i>unchecked</div>
+  <div id="evlist"></div>
+  <details><summary>Tool trace</summary><pre id="trace"></pre></details>
+</div>
+<div id="right">
+  <div id="bar"><span id="tabs"></span><span id="zoomctl"><button id="zo">−</button> <button id="fit">fit</button> <button id="zi">+</button></span></div>
+  <div id="viewport"><div id="sheet"><img id="img"><svg id="polys"></svg></div></div>
+  <div id="credit"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+let projects=[],sheets=[],cites=[],curPage=null,zoom=0.4,sel=null;
+let ACC=null;
+const pct=v=>v==null?'—':v.toFixed(1)+'%';
+function accHTML(){
+  if(!ACC) return '';
+  const rows=ACC.rows.map(r=>`<tr><td>${r.family}</td><td>${r.n}</td><td>${r.first_acc==null?'—':pct(r.first_acc)+(r.first_n&&r.first_n!=r.n?` <span class=muted>(n=${r.first_n})</span>`:'')}</td><td>${pct(r.acc)}</td><td>${pct(r.acc_ans)}</td><td>${pct(r.abstain)}</td><td class="note">${r.note}</td></tr>`).join('');
+  const kinds=ACC.cubicasa_kinds.map(k=>`<tr><td>${k.kind}</td><td>${k.n}</td><td>${pct(k.acc)}</td><td>${k.answered}</td><td>${pct(k.acc_ans)}</td><td>${pct(k.abstain)}</td></tr>`).join('');
+  return `<div class="muted">Split by drawing (IFC by model, Swiss by plan, CubiCasa by image, OpeningDesign by project). <b>First run</b> = first contact with the held-out split; <b>current</b> may be optimistic where test errors informed fixes. Accuracy counts an abstention as wrong; <b>acc | answered</b> is precision when ProofPlan does answer.</div>
+  <table class="acc"><tr><th>family</th><th>n</th><th>first run</th><th>current</th><th>acc | answered</th><th>abstain</th><th>note</th></tr>${rows}</table>
+  <h3 style="margin:18px 0 0;font-size:14px">CubiCasa5K per question kind (CPU only, no key; first and only test run of the current method)</h3>
+  <table class="acc"><tr><th>kind</th><th>n</th><th>acc</th><th>answered</th><th>acc | answered</th><th>abstain</th></tr>${kinds}</table>
+  ${ACC.cubicasa_rooms?`<div class="muted">Room kinds together: answered ${pct(100-ACC.cubicasa_rooms.first_run.abstain)} at ${pct(ACC.cubicasa_rooms.first_run.acc_ans)} precision (phase 1 rules: ${pct(100-ACC.cubicasa_rooms.phase1_first_run.abstain)} at ${pct(ACC.cubicasa_rooms.phase1_first_run.acc_ans)}).</div>`:''}`;
+}
+function showAcc(){ $('#acctab2').innerHTML=accHTML(); $('#accmodal').style.display='flex'; }
+function goHome(){ history.pushState({},'','/'); $('#home').style.display='block'; }
+function famStats(src){ const rs=ACC?ACC.rows.filter(r=>r.family.startsWith(src+'/')):[]; let n=0,a=0,ab=0,ans=0;
+  for(const r of rs){n+=r.n; a+=r.acc*r.n/100; ab+=r.abstain*r.n/100; ans+=r.acc_ans*(r.n-r.abstain*r.n/100)/100}
+  return {n, acc:n?100*a/n:null, abst:n?100*ab/n:null, prec:(n-ab)>0?100*ans/(n-ab):null}; }
+async function openProject(name){ history.pushState({},'',`/?p=${encodeURIComponent(name)}`); $('#home').style.display='none'; $('#project').value=name; await loadProject(); }
+async function init(){
+  const r=await (await fetch('/api/projects')).json(); projects=r.projects; $('#engine').textContent='Engine: '+r.engine;
+  try{ ACC=await (await fetch('/api/accuracy')).json(); }catch(e){}
+  $('#acctab').innerHTML=accHTML();
+  $('#cards').innerHTML=projects.filter(p=>p.name.startsWith('jd:')).map(p=>{const st=famStats(p.name.slice(3));
+    return `<div class="card" data-n="${p.name}"><h3>${p.label}</h3><div class="lic">${p.licence||''}</div>
+      <div class="big ${st.prec!=null&&st.abst>50?'lo':''}">${st.prec==null?'—':st.prec.toFixed(1)+'%'}</div><div class="st">precision when answering · abstains on ${st.abst==null?'—':st.abst.toFixed(0)+'%'} · n=${st.n}</div>
+      <div class="st">${p.blurb||''}</div></div>`}).join('');
+  document.querySelectorAll('.card').forEach(c=>c.onclick=()=>openProject(c.dataset.n));
+  if(!new URLSearchParams(location.search).get('p')) $('#home').style.display='block';
+  $('#project').innerHTML=projects.map(p=>`<option value="${p.name}">${p.label||p.name}</option>`).join('');
+  const want=new URLSearchParams(location.search).get('p'); if(want) $('#project').value=want;
+  $('#project').onchange=loadProject; $('#file').onchange=loadFile; await loadProject();
+}
+let jfiles=[],jsrc=null;
+const isJ=()=>$('#project').value.startsWith('jd:');
+async function loadProject(){
+  const name=$('#project').value;
+  if(name.startsWith('jd:')){ jsrc=name.slice(3); jfiles=await (await fetch(`/api/jdata/${jsrc}/files`)).json();
+    $('#file').style.display=''; $('#file').innerHTML=jfiles.map((f,i)=>`<option value="${i}">${f.name}${f.split?' · '+f.split:''}</option>`).join('');
+    const wf=new URLSearchParams(location.search).get('f'); if(wf){const i=jfiles.findIndex(f=>f.name==wf); if(i>=0) $('#file').value=i;}
+    return loadFile(); }
+  $('#file').style.display='none'; $('#credit').textContent=''; $('#legend').style.display='none';
+  sheets=await (await fetch(`/api/project/${name}/sheets`)).json();
+  const p=projects.find(p=>p.name==name);
+  $('#chips').innerHTML=p.samples.map(s=>`<span class="chip">${s}</span>`).join('');
+  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{$('#q').value=c.textContent;ask()});
+  cites=[]; renderTabs(); const plan=sheets.find(s=>s.level)||sheets[0]; showPage(plan.page);
+}
+async function loadFile(){
+  const f=jfiles[+$('#file').value]; cites=[]; sel=null;
+  $('#chips').innerHTML=f.samples.map(s=>`<span class="chip" data-q="${s.q.replace(/"/g,'&quot;')}">${s.q} <span class="gold">· gold ${s.gold}</span></span>`).join('');
+  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{$('#q').value=c.dataset.q;ask()});
+  const deep=['opening_design','cubicasa5k'].includes(jsrc);
+  const rel=f.view?f.view.rel:(deep?f.path.split('/').slice(2).join('/'):f.path.split('/').pop());
+  const img=new Image(); img.src=`/jpages/${f.view?f.view.src:jsrc}/${rel.split('/').map(encodeURIComponent).join('/')}`; await img.decode();
+  const W=f.width||img.naturalWidth, H=f.height||img.naturalHeight;
+  sheets=[{page:0,sheet:f.name.split('_plan-').pop().slice(0,44),title:'',level:true,width:W,height:H,url:img.src,credit:f.credit}];
+  $('#answer').textContent='—'; $('#evlist').innerHTML=''; $('#legend').style.display='none'; showPage(0,()=>fit());
+}
+function renderTabs(){
+  const pages=[...new Set(cites.map(c=>c.page))];
+  const show=pages.length?pages:sheets.filter(s=>s.level).map(s=>s.page);
+  $('#tabs').innerHTML=show.map(pg=>{const s=sheets.find(x=>x.page==pg);const n=cites.filter(c=>c.page==pg).length;
+    return `<span class="tab ${pg==curPage?'on':''}" data-p="${pg}">${s.sheet} ${s.title?'· '+s.title.slice(0,28):''}${n?' ('+n+')':''}</span>`}).join(' ');
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showPage(+t.dataset.p));
+}
+function showPage(pg,cb){
+  const name=$('#project').value; curPage=pg; const s=sheets.find(x=>x.page==pg);
+  const img=$('#img'); img.onload=()=>{drawBoxes(); cb&&cb()}; img.src=s.url||`/pages/${name}/${pg}.png`;
+  $('#credit').textContent=s.credit?('Drawing credit: '+s.credit):'';
+  img.style.width=s.width+'px'; img.style.height=s.height+'px'; setZoom(zoom,false); renderTabs();
+}
+function drawBoxes(){
+  document.querySelectorAll('.box').forEach(b=>b.remove());
+  const s=sheets.find(x=>x.page==curPage), svg=$('#polys'); svg.setAttribute('width',s.width); svg.setAttribute('height',s.height); svg.innerHTML='';
+  const vc=c=>c.verified===true?'vok':c.verified===false?'vbad':'vnone';
+  for(const c of cites.filter(c=>c.page==curPage&&c.poly)){
+    const pg=document.createElementNS('http://www.w3.org/2000/svg','polygon'); pg.setAttribute('points',c.poly.map(p=>p.join(',')).join(' '));
+    pg.setAttribute('class',vc(c)+(sel==c.ref?' sel':'')); svg.appendChild(pg); }
+  for(const c of cites.filter(c=>c.page==curPage&&c.bbox)){
+    const [x0,y0,x1,y1]=c.bbox, pad=3, d=document.createElement('div');
+    d.className='box'+(c.conflict?' conf':'')+(c.verified===true?' vok':c.verified===false?' vbad':'')+(c.poly?' poly':'')+(sel==c.ref?' sel':''); d.id='box'+c.ref;
+    Object.assign(d.style,{left:(x0-pad)+'px',top:(y0-pad)+'px',width:(x1-x0+2*pad)+'px',height:(y1-y0+2*pad)+'px'});
+    d.innerHTML=`<span>${c.ref}</span>`; d.title=c.text; d.onclick=()=>focusCite(c.ref,false); $('#sheet').appendChild(d);
+  }
+}
+function setZoom(z,keep=true){
+  const vp=$('#viewport'), cx=(vp.scrollLeft+vp.clientWidth/2)/zoom, cy=(vp.scrollTop+vp.clientHeight/2)/zoom;
+  zoom=Math.max(0.1,Math.min(4,z)); const s=sheets.find(x=>x.page==curPage);
+  $('#sheet').style.transform=`scale(${zoom})`; $('#sheet').style.width=s.width+'px'; $('#sheet').style.height=s.height+'px';
+  $('#viewport').firstElementChild.style.marginRight=(s.width*zoom-s.width)+'px'; $('#sheet').style.marginBottom=(s.height*zoom-s.height)+'px';
+  if(keep){vp.scrollLeft=cx*zoom-vp.clientWidth/2; vp.scrollTop=cy*zoom-vp.clientHeight/2}
+}
+function fit(){const s=sheets.find(x=>x.page==curPage),vp=$('#viewport');setZoom(Math.min(vp.clientWidth/s.width,vp.clientHeight/s.height),false);}
+$('#zi').onclick=()=>setZoom(zoom*1.4); $('#zo').onclick=()=>setZoom(zoom/1.4); $('#fit').onclick=fit;
+function focusCite(ref,center=true){
+  const c=cites.find(c=>c.ref==ref); if(!c) return; sel=ref;
+  if(c.page==null){ document.querySelectorAll('.ev').forEach(e=>e.classList.toggle('sel',+e.dataset.r==ref)); return; }
+  document.querySelectorAll('.ev').forEach(e=>e.classList.toggle('sel',+e.dataset.r==ref));
+  const go=()=>{drawBoxes(); if(!center) return; setZoom(1.6,false); const vp=$('#viewport'),[x0,y0,x1,y1]=c.bbox;
+    vp.scrollLeft=((x0+x1)/2)*zoom-vp.clientWidth/2; vp.scrollTop=((y0+y1)/2)*zoom-vp.clientHeight/2;};
+  if(c.page!=curPage) showPage(c.page,go); else go();
+}
+async function ask(){
+  const q=$('#q').value.trim(); if(!q) return; $('#answer').textContent='Thinking…'; $('#answer').className='';
+  const r=isJ()?await (await fetch('/api/jask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({path:jfiles[+$('#file').value].path,question:q})})).json()
+              :await (await fetch('/api/ask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({project:$('#project').value,question:q})})).json();
+  cites=r.citations; sel=null; if(r.sheets&&r.sheets.length) sheets=r.sheets; $('#legend').style.display=isJ()?'':'none';
+  const ch=[...document.querySelectorAll('.chip')].find(c=>c.dataset.q==q); if(ch) r.answer+=`\n\nGold (dataset): ${ch.querySelector('.gold').textContent.replace('· gold ','')}`;
+  const html=r.answer.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\[(\d+)\]/g,'<a class="cite" data-r="$1">[$1]</a>');
+  $('#answer').className=r.status; $('#answer').innerHTML=`<span class="badge b-${r.status}">${r.status.toUpperCase()}</span> <span style="color:#889;font-size:11px">${r.engine}</span>\n`+html;
+  document.querySelectorAll('a.cite').forEach(a=>a.onclick=()=>focusCite(+a.dataset.r));
+  $('#evlist').innerHTML=cites.map(c=>`<div class="ev" data-r="${c.ref}"><b>[${c.ref}]</b><span class="v">${c.verified===true?'🟩':c.verified===false?'🟥':'⬜'}</span><span>${c.text}${c.guid?' <span class=k>'+c.guid+'</span>':''}</span><span class="k">${c.sheet||''} · ${c.kind}</span></div>`).join('');
+  document.querySelectorAll('.ev').forEach(e=>e.onclick=()=>focusCite(+e.dataset.r));
+  $('#trace').textContent=JSON.stringify(r.trace,null,1);
+  const fc=cites.find(c=>c.page!=null);
+  if(fc){ showPage(fc.page,()=>{fit()}); } else if(isJ()){ showPage(0,()=>fit()); } else { renderTabs(); drawBoxes(); }
+}
+$('#go').onclick=ask; $('#q').addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();ask()}});
+init();
+</script></body></html>
