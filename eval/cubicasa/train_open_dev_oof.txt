@@ -1,0 +1,17 @@
+== door: asked 1686, with candidates 699, any candidate right 0.119, top-1 acc 0.114
+   tau 0.30: answered 0.037 prec 0.371 n=62 LB 0.268
+   tau 0.40: answered 0.018 prec 0.333 n=30 LB 0.193
+   tau 0.50: answered 0.007 prec 0.364 n=11 LB 0.135
+   tau 0.60: answered 0.001 prec 0.500 n=2 LB 0.025
+   CP rule (LB >= 95%): tau=1.01 answered 0.00% precision 0.0% (LB 0.0%, n=0) -> DISABLED (no tau reaches the bound)
+== window: asked 2292, with candidates 931, any candidate right 0.078, top-1 acc 0.132
+   tau 0.30: answered 0.053 prec 0.347 n=121 LB 0.275
+   tau 0.40: answered 0.029 prec 0.418 n=67 LB 0.316
+   tau 0.50: answered 0.019 prec 0.372 n=43 LB 0.249
+   tau 0.60: answered 0.012 prec 0.464 n=28 LB 0.301
+   tau 0.70: answered 0.006 prec 0.500 n=14 LB 0.264
+   tau 0.80: answered 0.001 prec 1.000 n=3 LB 0.368
+   tau 0.85: answered 0.001 prec 1.000 n=2 LB 0.224
+   CP rule (LB >= 95%): tau=1.01 answered 0.00% precision 0.0% (LB 0.0%, n=0) -> DISABLED (no tau reaches the bound)
+
+Two-detector agreement check (dev, door images with both detectors, non-exploded wall mask): strict arc-template count == gap-swing count (d70) on 49 images, of which 16 (33%) equal the gold.

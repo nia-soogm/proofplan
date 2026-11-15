@@ -29,31 +29,43 @@ where *current* is higher, test errors informed a fix, so treat it as optimistic
 
 | family | n (test) | first run | current | acc \| answered | abstain | how |
 |---|---|---|---|---|---|---|
-| swiss_dwellings / area | 5798 | 99.0 % (n=300) | 99.6 % | 99.6 % | 0 % | DXF room polygons minus holes; PDF fill classes exclude outdoor/stairwell |
-| swiss_dwellings / count | 12364 | 100 % (n=300) | 100 % | 100 % | 0 % | DXF symbols/rooms, checked for ink on the PDF |
+| swiss_dwellings / area | 5798 | 99.0 % (n=300) | 99.4 % (phase B first run; was 99.6 %) | 99.97 % (was 99.6 %) | 0.6 % | DXF room polygons minus holes; PDF fill classes exclude outdoor/stairwell; **NOT SURE when the PDF filled-region area differs from the DXF by > 1.5 %** (phase B, BRAINSTORM #5) |
+| swiss_dwellings / count | 12364 | 100 % (n=300) | 100 % | 100 % | 0 % | DXF symbols/rooms, checked for ink on the PDF; NOT SURE when extra bathtub drains or an apartment-letter gap suggest a missed symbol/unit (did not fire on test) |
 | ifc_models / area | 1490 | 100 % (n=300) | 100 % | 100 % | 0 % | IfcSpace Qto (unit-scaled) or footprint; plan polygon cross-check |
 | ifc_models / count | 328 | 90.0 % (n=300) | 100 % | 100 % | 0 % | elements by storey containment; GUID boxes on the plan |
 | ifc_models / length | 22 | 100 % | 100 % | 100 % | 0 % | |
 | ifc_models / volume | 42 | 100 % | 100 % | 100 % | 0 % | |
 | opening_design / count | 17 | 64.7 % | 88.2 % | 93.8 % | 5.9 % | rotated ruled-table extractor; filter + sum Count column |
 | opening_design / text | 3 | 33.3 % | 100 % | 100 % | 0 % | lenient match (all digit tokens of the gold must appear) |
-| cubicasa5k / count (rooms) | 16186 | 45.8 % (phase 1 rules: 28.5 %) | = | 94.7 % (phase 1: 89.6 %) | 51.6 % (phase 1: 68.3 %) | OCR v2 (upright + rotated passes, weak single letters kept) → FI/SV label lexicon + apartment summary → dev-trained gate per room kind; one box per label |
-| cubicasa5k / count (storeys) | 4990 | 85.2 % | = | 95.4 % | 10.7 % | XY-cut layout split + OCR storey words, dev-trained gate; one box per drawing |
-| cubicasa5k / count (WC seats) | 4984 | 28.0 % | = | 91.3 % | 69.4 % | CPU closed-shape symbol classifier + count gate (dev-trained); one box per seat |
-| cubicasa5k / count (doors, windows, sinks, showers) | 18190 | 0 % | = | — | 100 % | CPU detectors tried (≤ 17 % exact on dev) → abstain; needs a trained detector or a VLM |
-| ifc_bench / text | 477 | 17.8 % (41.7 % \| ans., 42.8 % answered) | 18.0 % | 47.5 % | 62.1 % | IfcOpenShell fact cache + ~40 question templates (no LLM); strict scorer; templates < 60 % on dev withheld; GUID evidence, boxed on `ifc_models` renders when the model has one |
+| cubicasa5k / count (rooms) | 16186 | 49.2 % (phase 3: 45.8 %, phase 1 rules: 28.5 %) | = | 94.3 % (phase 3: 94.7 %) | 47.8 % (phase 3: 51.6 %) | OCR v2 (upright + rotated passes, weak single letters kept) → FI/SV label lexicon + apartment summary + code identity (KH vs PH, combos) → dev-trained gate per room kind; a PH washroom with no sauna label proposes "1 sauna" (said so); one box per label |
+| cubicasa5k / count (storeys) | 4990 | 88.3 % (phase B CP rule; before: 85.2 % @ 95.4 %) | = | 94.0 % | 6.1 % | XY-cut layout split + OCR storey words, dev-trained gate; one box per drawing |
+| cubicasa5k / count (WC seats) | 4984 | 46.2 % (phase 1 detector: 28.0 %) | = | 92.4 % (phase 1: 91.3 %) | 50.0 % | CPU symbol detector fused with bathroom/WC room labels, dev-trained gate; detector boxes and/or label boxes; the text says when the count rests on labels |
+| cubicasa5k / count (showers/baths) | 4604 | 42.7 % | = | 94.2 % | 54.7 % | **inferred from room labels** (≈ one per bathroom/washroom), not detected; label boxes; ~⅓ of dev answers are the prior "a dwelling has ≥ 1" with the room labels read as boxes, and the answer says so |
+| cubicasa5k / count (sinks) | 4930 | 19.1 % | = | 91.8 % | 79.2 % | **inferred from room labels** (kitchen + bathrooms + WCs), not detected; label boxes |
+| cubicasa5k / count (doors, windows) | 8656 | 0 % | = | — | 100 % | CPU detectors tried → abstain. Phase E: a classical-CV wall-gap detector (door swing arcs, window glass lines) + gate reached at best 37–46 % right when answering on dev, far below the required 95 % lower bound, so it is **not shipped** (no test run). Needs a trained detector or a VLM |
+| ifc_bench / text | 477 | 17.8 % (41.7 % \| ans., 42.8 % answered); phase C first run: 13.8 % (58.9 % \| ans., 23.5 % answered) | 7.3 % (**current, optimistic**: test scored before) | 72.9 % | 89.9 % | IfcOpenShell fact cache + ~40 question templates (no LLM); strict scorer; phase E: every answer is re-derived by a second, independent IFC code path (else NOT SURE); a template answers only if it was right in ≥ 90 % of ≥ 5 dev answers with any dev model or near-copy group left out, and only if it consumes every content word of the question; GUID evidence, boxed on `ifc_models` renders when the model has one |
+| **ALL** (every test question) | 64891 | — (families were first-run at different times) | **58.0 %** | 97.0 % | 40.2 % | full run after phase E (only ifc_bench changed): `eval/results_test_all_current.txt`; phase D was 58.1 % / 96.9 % |
 
 OpeningDesign dev (Sports_Complex, tuned on): area 100 % (n=9), count 90.9 % (n=22), text 84.6 % (n=13).
-ifc_bench dev (11 models, tuned on): 50.1 % overall, 83.9 % when answering, 59.8 % answered (n=343) — see [eval/ifcb/](eval/ifcb/).
+ifc_bench dev (11 models, n=343), phase E: leave-one-model-out out-of-fold **98.0 % when answering** (49/50, 95 % lower bound 90.9 %), 14.6 % answered (phase C: 87.9 % / 36.2 %) — see [eval/ifcb/](eval/ifcb/) and `eval/ifcb_lomo.py`. On test the same method gives 72.9 % (current, optimistic), so the dev number does not transfer.
+**Strict mode** (app checkbox, `jeval --strict`): every dev-calibrated gate uses a second threshold whose Clopper–Pearson 95 % lower bound
+on dev OOF precision is ≥ 95 % (normal: ≥ 90 %). CubiCasa test first run in strict mode: 26.0 % accuracy, **96.8 % when answering**,
+26.9 % answered (normal: 39.7 % / 93.9 % / 42.3 %). Bedroom and balcony counts never answer in strict mode. Vector sources are unaffected.
+Per-kind: `eval/cubicasa/test_firstrun_phaseB_strict.txt`.
 Per-kind CubiCasa numbers: [eval/cubicasa/NOTES.md](eval/cubicasa/NOTES.md). OpeningDesign notes: [eval/opening/NOTES.md](eval/opening/NOTES.md).
 The same table is served at `/api/accuracy` and shown in the app.
 
 **Honest caveats.** Swiss and IFC questions appear to be generated from the same geometry we measure, so near-100 % there shows the
 pipeline is faithful, not that it generalises to arbitrary drawings. OpeningDesign has only 20 held-out questions. CubiCasa is the
-real raster challenge. Without a neural model ProofPlan answers about half of its room questions (48 %), ~90 % of its storey questions,
-~30 % of its WC-seat questions, and none of its door, window, sink or shower questions. The room, storey and WC-seat gates are small
-models fit on dev counts (WC seats also on ~700 hand-labelled dev crops); their thresholds were chosen out-of-fold on dev, and test
-was scored once per method. Room-count caveats:
+real raster challenge. Without a neural model ProofPlan answers about half of its room questions (52 %), ~90 % of its storey questions,
+half of its WC-seat and shower/bath questions, a fifth of its sink questions, and none of its door or window questions. The gates are small
+models fit on dev counts (WC seats also on ~700 hand-labelled dev crops). Their thresholds were chosen out-of-fold on dev; since phase A each τ
+is the max-coverage threshold whose Clopper–Pearson 95 % lower bound on dev precision is ≥ 90 %. Test was scored once per method
+(phase A first run: commit 6f44962, `eval/cubicasa/test_firstrun_phaseA.txt`; phase B, storey gate moved to the same rule: commit 93a0afe,
+`eval/cubicasa/test_firstrun_phaseB.txt`). Fixture caveat: showers/baths and sinks are **counted from room
+labels, not from fixture symbols**. A bathroom label is taken as about one shower or tub. It works on dev/test because most flats are
+simple, but it is a statistical inference, and every such answer says "inferred from room labels; the fixture symbols themselves were not
+detected" and boxes the labels it used. On test the separate-WC room kind came out at 89.7 % when answering, just under 90 %. Room-count caveats:
 - Gold kitchens are 1 on 98 % of plans, so kitchen precision (97.8 %) mostly says "a kitchen label was read", not that counting is hard.
   The gate never answers from the prior alone: every answer needs a label, the summary, or (for 0) other room labels read on the plan.
 - Answers of 0 (no sauna / no separate WC / no balcony) rest on absence: other room labels were read and none is of that kind.
@@ -68,6 +80,57 @@ was scored once per method. Room-count caveats:
 must appear whole, and a "not available" gold needs a negative answer. Dev precision (84 %) did not carry over to the held-out models
 (42 % first run): on test the questions are more varied (orientation and building-part qualifiers) and templates matched
 questions broader than they could answer. The scope guards added after that run raise precision to 47.5 % but are test-informed.
+Phase C replaced the hand-set gate with a **leave-one-model-out gate** fitted on dev: a template answers only if it matched the gold in
+≥ 75 % of ≥ 3 dev answers, and still does with any one dev model left out. It also added a **strict parser**: a word of the question
+that the template does not understand ("above", "volume" for the load-bearing template) means NOT SURE, and the answer names the word.
+New test first run: **58.9 % when answering** (was 41.7 %), at 23.5 % answered (was 42.8 %). Accuracy fell from 17.8 % to 13.8 %.
+Phase E added **answer self-checks** (each number and grouping re-derived by an independent walk of the IFC graph; ambiguous "type"
+groupings, mislabelled storeys and type-name fire ratings that contradict the properties mean NOT SURE) and raised the gate to ≥ 90 % of ≥ 5
+dev answers. Dev out-of-fold: 98.0 % when answering. Test, run once more and labelled **current (optimistic)** because this test set had
+been scored before: **72.9 % when answering** (35/48), 10.1 % answered, 7.3 % accuracy. The ≥ 90 % target is **not met** on test.
+
+### What "100 %" honestly means
+
+ProofPlan aims at 100 % **precision**, not 100 % coverage. When it answers, the number comes with boxes on the drawing and, where
+possible, a second independent source that agrees. When the evidence doesn't hold up, it says NOT SURE.
+On vector drawings (Swiss DXF/PDF, IFC) that already means ≥ 99.9 % right when it answers (Swiss area 99.97 %, all else 100 %). On raster scans
+without a neural detector it means ~94 % right on the ~42 % of questions it chooses to answer, and the rest are honest abstentions, not guesses.
+Coverage goes up only when a new independent signal (a label, a summary, a symbol) passes a threshold fixed on dev before the
+held-out drawings are scored once. That is why our "100 %" claim is about answers you can check, not about pretending every
+question is answerable.
+*Exception:* free-text ifc_bench questions are only 72.9 % right when answered on test (phase E, optimistic), so the claim does not cover them.
+
+### What changed in phase E (Sat 14 Nov evening)
+
+| item | target | result |
+|---|---|---|
+| E1 CubiCasa doors/windows, classical CV (wall gaps, swing arcs, window lines) + gate | dev OOF Clopper–Pearson 95 % lower bound ≥ 95 % | **not met → not shipped.** Best dev OOF: doors 37 % right at 3.7 % answered, windows 46 % at 1.2 %. Where two independent door detectors agree, only 33 % match the gold. Doors/windows still abstain; no test run. Code kept disabled: `bp/sources/cubi_open.py`, `scripts/cubi/train_open.py`, `eval/cubicasa/train_open_dev_oof.txt` |
+| E2 ifc_bench precision: self-checks + stricter leave-one-model-out gate | ≥ 90 % when answering | dev OOF 98.0 % (LB 90.9 %); **test 72.9 % (current, optimistic) — not met**; was 58.9 %. Answered 23.5 % → 10.1 %, accuracy 13.8 % → 7.3 % |
+| full test run | no regressions | ALL 58.1 % / 96.9 % → 58.0 % / 97.0 %; every other family unchanged |
+
+### What changed overnight (Sat 14 Nov, phases A–D)
+
+Before = full test run at commit a0ffb88 (`eval/results_test_all_before_overnight.txt`). After = the first (and only) test run of
+each new method, re-confirmed unchanged by the final phase D run. Nothing was tuned on test.
+
+| family | before: acc / when answering / answered | after: acc / when answering / answered | what changed |
+|---|---|---|---|
+| CubiCasa (all kinds, 44,350 q) | 29.5 % / 94.6 % / 31.1 % | **39.7 % / 93.9 % / 42.3 %** | showers/baths and sinks inferred from room labels (said so in the answer); WC seats = detector + labels; room gate learns code identity and "washroom → sauna"; Clopper–Pearson thresholds |
+| · showers/baths | 0 % / — / 0 % | 42.7 % / 94.2 % / 45.3 % | new (from bathroom labels) |
+| · sinks | 0 % / — / 0 % | 19.1 % / 91.8 % / 20.8 % | new (from kitchen/bath/WC labels) |
+| · WC seats | 28.0 % / 91.3 % / 30.6 % | 46.2 % / 92.4 % / 50.0 % | detector fused with room labels |
+| · rooms (6 kinds) | 45.8 % / 94.7 % / 48.4 % | 49.2 % / 94.3 % / 52.2 % | sauna 33.7 → 45.0 %, balcony 40.2 → 46.1 % |
+| · storeys | 85.2 % / 95.4 % / 89.3 % | 88.3 % / 94.0 % / 93.9 % | threshold now from a 95 % lower bound on dev |
+| · doors, windows | 0 % | 0 % | still abstain (no detector) |
+| Swiss Dwellings (18,162 q) | 99.87 % right when answering, 24 wrong | **99.98 %, 4 wrong**, 0.18 % abstain | NOT SURE when DXF and PDF fill areas disagree, extra bathtub drains, apartment-letter gaps |
+| ifc_bench (477 q) | 17.8 % / 41.7 % / 42.8 % (first run) | 13.8 % / **58.9 %** / 23.5 % | leave-one-model-out template gate + "every word understood" parser; fuller answers |
+| IFC models, OpeningDesign | unchanged | unchanged | — |
+| **ALL (64,891 q)** | 51.1 % / 97.4 % / 52.5 % | **58.1 % / 96.9 % / 59.9 %** | overall precision is 0.5 pt lower only because many more ~94 % CubiCasa answers enter the mix |
+
+New: **strict mode** (app checkbox): CubiCasa 26.0 % / 96.8 % / 26.9 %. Not shipped: the IFC cross-check abstain (no dev errors to catch),
+a neural detector for doors/windows (training-set leakage risk), extra OCR passes and a touching-storeys detector (no time).
+Short of target: ifc_bench precision 58.9 % (target ≥ 60 %); separate-WC room 89.7 % and strict-mode bathroom 94.4 % on test, just under
+their 90 % / 95 % dev bounds.
 
 ## Run (fresh clone)
 
@@ -97,6 +160,14 @@ playwright install chromium && python scripts/shot_proofplan.py   # screenshots 
 Optional VLM for raster symbols: `BP_VLM=anthropic|openai|xai` plus `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `XAI_API_KEY`.
 The VLM must return JSON boxes; it is asked twice and ProofPlan abstains unless both counts agree (`bp/sources/vlm.py`, not yet evaluated).
 
+### 3D evidence view
+
+On an IFC question (for example *"How many doors are shown on the floor plan of 'E00_OKRD'?"*), a **3D** tab appears next to the plan.
+The building is tessellated once on the CPU with IfcOpenShell (`app/ifc3d.py`, cached under `data/jcache/ifc3d/`) and shown with vendored [three.js](https://threejs.org/) (MIT, no CDN).
+Cited elements (the 26 doors, say) are highlighted; everything else is a grey, semi-transparent context. Click an element to see its IFC class, name, GlobalId and the quantity used in the answer, or use **Fit to highlighted**.
+This does not change any answer, gate or accuracy number. `GET /api/ifc3d?path=…&highlight=<GlobalId>`.
+
+
 ## How it works
 
 ```
@@ -110,7 +181,8 @@ bp/sources/opening.py   schedule QA: pick schedule, parse filters (type marks, s
 bp/sources/cubicasa.py  CubiCasa entry point: OCR (v1 upright, v2 with 90/270 passes), storey + symbol answers
 bp/sources/cubi_rooms.py  room labels: FI/SV lexicon, combo labels (KH/WC, OH+KK), summary parser, de-dup, dev-trained gate
 bp/sources/ifcb_facts.py  ifc_bench: one-pass IfcOpenShell extraction (psets, quantities, materials, types, storeys) -> cached pickle
-bp/sources/ifcbench.py  ifc_bench: intent routing -> template handlers; unit normalisation; dev-tuned gate; GUID evidence + plan boxes
+bp/sources/ifcbench.py  ifc_bench: intent routing -> template handlers; unit normalisation; LOMO gate (ifcb_gate.json); GUID evidence + plan boxes
+bp/sources/ifcb_parse.py  ifc_bench: strict parser, every content word of the question must be consumed by the template
 bp/sources/vlm.py       key-pluggable grounded VLM (two-pass agreement)
 app/                    FastAPI server + single-page UI (project picker, viewer, evidence list, accuracy panel)
 eval/                   held-out split (eval/jeval.py: split_of), scorers, result tables

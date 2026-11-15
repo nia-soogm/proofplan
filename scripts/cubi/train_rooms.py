@@ -13,10 +13,13 @@ from gold import gold
 from bp.sources import CACHE, cubi_rooms as R
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import GroupKFold
+from bp.sources.calib import choose_tau, TARGET as CP_TARGET, TARGET_STRICT, choose_strict
 
 TARGET = float(sys.argv[1]) if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else 0.92
 MIN_TAU = 0.6
 OCRDIR = "cubi" if "--ocr1" in sys.argv else "cubi_ocr2"
+NEW = "--oldfeat" not in sys.argv  # BRAINSTORM #4: code-identity features + washroom->sauna candidate
+CP = "--point" not in sys.argv  # BRAINSTORM #6: tau by Clopper-Pearson 95 % lower bound >= 0.90 (default); --point = old 92 % point rule
 
 
 def table(split):
@@ -31,7 +34,7 @@ def table(split):
         for k in R.KINDS:
             if k not in gk:
                 continue
-            for v, src, f, ev in R.candidates(ex, k, o["size"]):
+            for v, src, f, ev in R.candidates(ex, k, o["size"], use_new=NEW):
                 rows.append((p, k, v, f, gk[k]))
     return g, rows
 
@@ -43,7 +46,7 @@ def mk():
 
 def main():
     g, rows = table("dev")
-    out = {"models": {}, "tau": {}, "dev_oof": {}, "target": TARGET}
+    out = {"models": {}, "tau": {}, "tau_strict": {}, "dev_oof": {}, "dev_oof_strict": {}, "target": TARGET}
     for k in R.KINDS:
         rk = [r for r in rows if r[1] == k]
         n_q = len({r[0] for r in rows if r[1] == k} | {p for p in g if k in g[p] and (CACHE / OCRDIR / f"{Path(p).stem}.json").exists()})
@@ -70,16 +73,29 @@ def main():
                 print(f"   tau={t:.2f} answered={cov:.3f} prec={pr:.3f} n={sel.sum()}")
         if choice is None:
             choice = (1.01, 0.0, 0.0, 0)
+        if CP:
+            c = choose_tau(pb, yb, n_q, target=CP_TARGET, min_tau=MIN_TAU)
+            choice = (c["tau"], c["answered"], c["precision"], c["n"])
+            print(f"   CP lower bound {c['lower']:.3f}")
         print(f"   chosen tau={choice[0]:.2f}: answered {choice[1]:.1%} of asked, precision {choice[2]:.1%} (n={choice[3]})")
+        cs = choose_strict(pb, yb, n_q, choice[0], min_tau=MIN_TAU)  # strict mode (BRAINSTORM #6)
+        print(f"   strict (LB >= {TARGET_STRICT:.0%}): tau={cs['tau']:.2f} answered {cs['answered']:.1%} precision {cs['precision']:.1%} "
+              f"(LB {cs['lower']:.3f}, n={cs['n']})")
+        out["tau_strict"][k] = cs["tau"]
+        out["dev_oof_strict"][k] = {"answered": cs["answered"], "precision": cs["precision"], "n": cs["n"], "asked": n_q, "lower": cs["lower"]}
         out["models"][k] = mk().fit(X, y); out["tau"][k] = choice[0]
         out["dev_oof"][k] = {"answered": choice[1], "precision": choice[2], "n": choice[3], "asked": n_q}
     out["keys"] = sorted(rows[0][3])
     out["ocr"] = OCRDIR
+    out["new_feats"] = NEW
+    out["rule"] = "cp90" if CP else f"point{TARGET}"
     if "--nosave" not in sys.argv:
         pickle.dump(out, open(Path(__file__).resolve().parents[2] / "bp/models/cubi_rooms.pkl", "wb"))
     tot = sum(v["n"] for v in out["dev_oof"].values()); ask = sum(v["asked"] for v in out["dev_oof"].values())
     ok = sum(v["n"] * v["precision"] for v in out["dev_oof"].values())
     print(f"ALL room kinds dev OOF: answered {tot / ask:.1%}, precision {ok / max(1, tot):.1%}")
+    tot = sum(v["n"] for v in out["dev_oof_strict"].values()); ok = sum(v["n"] * v["precision"] for v in out["dev_oof_strict"].values())
+    print(f"ALL room kinds dev OOF, strict: answered {tot / ask:.1%}, precision {ok / max(1, tot):.1%}")
 
 
 if __name__ == "__main__":

@@ -4,12 +4,14 @@ Room-type counts (bedroom, bathroom, separate WC, sauna, kitchen, balcony) come 
 It runs on OCR v2 (`ocr2`: upright + 90°/270° passes, low-confidence single letters kept), with a Finnish/Swedish label
 lexicon and the apartment-type summary ('3H+K+S'). A dev-trained gate decides whether to answer, and each counted
 label is a box on the image. The older rule set further down is only a fallback for when bp/models/cubi_rooms.pkl is missing.
-Storeys: sheet layout split + gate (cubi_cv). WC seats: closed-shape symbol detector + gate (cubi_sym).
-Doors, windows, sinks and showers/baths abstain (bp/sources/vlm.py is key-pluggable; nothing is sent without a key).
+Storeys: sheet layout split + gate (cubi_cv). WC seats, sinks, showers/baths: room-label formulas fused with the WC-symbol
+detector behind a dev-trained gate (cubi_fix; answers say when a count is inferred from labels rather than detected).
+Doors and windows abstain (bp/sources/vlm.py is key-pluggable; nothing is sent without a key).
 """
 import functools, json, re
 from pathlib import Path
 from . import JDATA, CACHE
+from .calib import mode_text, strict
 
 # label -> room kind. Matching is on the whole OCR token after removing digits/punctuation ('MH 2', 'MH2.', 'S 1').
 LEX = {
@@ -172,6 +174,9 @@ def answer(question, path, min_labels=3, min_conf=0.5):
         from . import vlm
         if vlm.available():
             return vlm.count_symbols(path, k)
+        r = fixture_answer(path, k)
+        if r is not None:
+            return r
         return symbol_answer(path, k)
     if k == "storey":
         return storey_answer(path)
@@ -214,7 +219,9 @@ def answer(question, path, min_labels=3, min_conf=0.5):
 ROOM_NAMES = {"bedroom": ("bedroom", "bedrooms"), "bathroom": ("bathroom", "bathrooms"), "wc": ("separate WC", "separate WCs"),
               "sauna": ("sauna", "saunas"), "kitchen": ("kitchen", "kitchens"), "balcony": ("balcony", "balconies")}
 SRC_TEXT = {"label": "room label(s) read", "label_all": "room label(s) read incl. low-confidence single letters",
-            "presence": "a room label is present", "summary": "the apartment-type summary"}
+            "presence": "a room label is present", "summary": "the apartment-type summary",
+            "washroom": "inferred from a PH/PESUH washroom label (no sauna label read; saunas usually adjoin the washroom, sauna bench not detected)"}
+
 
 
 def room_answer(path, k):
@@ -232,7 +239,7 @@ def room_answer(path, k):
     status, v, src, ev, p, tau, ex = r
     one, many = ROOM_NAMES[k]
     why = " + ".join(SRC_TEXT[s] for s in src.split("+") if s in SRC_TEXT)
-    labs = ", ".join(f"'{t['text']}'" for t, lab in ev if lab == k)
+    labs = ", ".join(f"'{t['text']}'" for t, lab in ev if lab == k or lab.startswith("washroom"))
     summ = [t for t, lab in ev if lab == "apartment-type summary"]
     detail = (f"; labels: {labs}" if labs else "") + (f"; summary '{summ[0]['text'].strip()}'" if summ else "")
     if summ and k == "bedroom":
@@ -246,8 +253,8 @@ def room_answer(path, k):
             e["verified"] = True
     if status != "answered":
         return {"status": "abstain", "value": None, "evidence": [dict(e, verified=False) for e in evid],
-                "answer": f"NOT SURE: best guess {v} {one if v == 1 else many} ({why}{detail}), but the gate is p={p:.2f} < {tau:.2f} (dev-calibrated)."}
-    return _ok(v, f"{v} {one if v == 1 else many}: {why}{detail} (dev-calibrated gate p={p:.2f}).", evid)
+                "answer": f"NOT SURE: best guess {v} {one if v == 1 else many} ({why}{detail}), but the gate is p={p:.2f} < {tau:.2f} (dev-calibrated; {mode_text()})."}
+    return _ok(v, f"{v} {one if v == 1 else many}: {why}{detail} (dev-calibrated gate p={p:.2f}; {mode_text()}).", evid)
 
 
 @functools.lru_cache(maxsize=1)
@@ -272,8 +279,10 @@ def storey_answer(path):
     vs = [v for v in cubi_cv.VALLEYS if f[f"v{int(v * 100)}_n_big"] == n]
     if not vs:
         return _abst(f"layout suggests {n} storey(s) (p={conf:.2f}) but no split of the sheet into {n} drawings was found")
-    if conf < M["tau"]:
-        return _abst(f"{n} storey(s) is the best guess but confidence {conf:.2f} is below the dev-calibrated gate {M['tau']:.2f}")
+    from .calib import tau_for, mode_text
+    tau = tau_for(M)
+    if conf < tau:
+        return _abst(f"{n} storey(s) is the best guess but confidence {conf:.2f} is below the dev-calibrated gate {tau:.2f} ({mode_text()})")
     v = max(vs, key=lambda v: f[f"v{int(v * 100)}_parts_lab"])
     big = cubi_cv.big_parts(path, v)[0]
     ev = [{"bbox": [int(x), int(y), int(x + w), int(y + h)], "page": 0, "kind": "storey",
@@ -282,8 +291,61 @@ def storey_answer(path):
     wtoks = [t for t in ocr(path)["tokens"] if re.sub(r"\s+", "", t["text"].upper()) in words]
     ev += [_ev(t, "storey label") for t in wtoks]
     msg = (f"{n} storey{'s' if n > 1 else ''}: the sheet holds {len(big)} separate plan drawing{'s' if len(big) > 1 else ''}"
-           + (f"; storey labels read: {', '.join(sorted(words))}" if words else "") + f" (layout gate p={conf:.2f}).")
+           + (f"; storey labels read: {', '.join(sorted(words))}" if words else "") + f" (layout gate p={conf:.2f}; {mode_text()}).")
     return _ok(n, msg, ev)
+
+
+FIX_RULE = {"shower_bath": "about one shower or bathtub per bathroom/washroom", "sink": "about one sink per kitchen, bathroom and WC",
+            "wc_seat": "about one WC seat per WC and bathroom"}
+
+
+def fixture_answer(path, k):
+    """Showers/baths, sinks, WC seats via bp/sources/cubi_fix.py: room-label formulas (+ the WC-symbol detector for WC seats)
+    behind a dev-trained gate. None when there is no model or the kind is disabled (falls back to symbol_answer)."""
+    from . import cubi_fix
+    M = cubi_fix.model()
+    if M is None or not M["enabled"].get(k):
+        return None
+    o = ocr2(path)
+    r = cubi_fix.answer(path, k, o["tokens"], o["size"])
+    if r is None:
+        return None
+    if "value" not in r:
+        return _abst(r["why"])
+    one, many = cubi_fix.NAMES[k]
+    v, L = r["value"], r["info"]
+    read = []
+    for key, name in (("nk", "kitchen"), ("nb", "bathroom/washroom"), ("nw", "WC"), ("ns", "sauna")):
+        if L[key]:
+            read.append(f"{L[key]} {name}")
+    labs = ", ".join(f"'{t['text']}'" for t, lab in r["evidence"] if lab != "other room label")
+    read_txt = (f"room labels read: {', '.join(read)} ({labs})" if read else f"no matching room label among {L['n_lab']} room labels read")
+    evid = [_ev(t, lab) for t, lab in r["evidence"]]
+    det_txt = ""
+    if r["used_det"] and r["det_boxes"]:
+        for i, b in enumerate(r["det_boxes"]):
+            x0, y0, x1, y1 = (int(c) for c in b); pad = int(0.25 * max(x1 - x0, y1 - y0)) + 1
+            evid.append({"bbox": [x0 - pad, y0 - pad, x1 + pad, y1 + pad], "page": 0, "kind": k, "text": f"WC seat symbol #{i + 1} (detector)", "verified": None})
+        has_lab = any(lab in cubi_fix.LABS[k] for _, lab in r["evidence"])
+        label_only = has_lab and any(t not in ("detector",) and t not in cubi_fix.PRIOR_TAGS for t in r["tags"])
+        how = (f"{r['det_n']} WC-seat symbol(s) detected (boxed)" + (" and the room labels give the same count" if label_only else "")
+               + (f"; {read_txt}" if has_lab else ""))
+        if label_only:
+            for e in evid:
+                e["verified"] = True  # detector and labels agree: two independent sources
+    elif not any(lab in cubi_fix.LABS[k] for _, lab in r["evidence"]):
+        need = {"shower_bath": "bathroom/washroom", "sink": "kitchen, bathroom or WC", "wc_seat": "bathroom or WC"}[k]
+        how = (f"no {need} label was read, so this is a prior: the plan is a dwelling ({L['n_lab']} room labels read, boxed) "
+               f"and dwellings like it hold at least one; the fixture symbols themselves were not detected"
+               + (f" (the WC-symbol detector found {r['det_n']})" if k == "wc_seat" else ""))
+    else:
+        how = (f"inferred from room labels, {FIX_RULE[k]}; the fixture symbols themselves were not detected"
+               + (f" (the WC-symbol detector found {r['det_n']}, so the count rests on the labels)" if k == "wc_seat" else "") + f"; {read_txt}")
+    noun = one if v == 1 else many
+    if r["status"] != "answered":
+        return {"status": "abstain", "value": None, "evidence": [dict(e, verified=False) for e in evid],
+                "answer": f"NOT SURE: best guess {v} {noun} ({how}), but the gate is p={r['p']:.2f} < {r['tau']:.2f} (dev-calibrated; {mode_text()})."}
+    return _ok(v, f"{v} {noun}: {how} (dev-calibrated gate p={r['p']:.2f}; {mode_text()}).", evid)
 
 
 def symbol_answer(path, k):
@@ -292,12 +354,13 @@ def symbol_answer(path, k):
     one, many = cubi_sym.NAMES.get(k, (k, k))
     if r is None:
         why = {"sink": "the CPU sink detector reached only ~14 % exact counts on dev and no confidence gate reached 90 % precision",
-               "door": "the CPU door-swing (arc) detector reached only ~14 % exact counts on dev and no confidence gate reached 90 % precision",
+               "door": "the CPU door detectors (swing-arc template and wall-gap swing test) reach only ~10-18 % exact counts on dev and no confidence gate reached the required precision",
+               "window": "the CPU window detector (thin glass lines in wall gaps) reaches only ~10-17 % exact counts on dev and no confidence gate reached the required precision",
                }.get(k, f"no CPU detector for {many} yet")
         return _abst(f"{why} (needs a trained detector or a grounded VLM)")
     n, conf, tau, ev = r
     if conf < tau:
-        return {"status": "abstain", "answer": f"NOT SURE: found {n} {one} candidate(s) but the count gate is {conf:.2f} < {tau:.2f} (dev-calibrated).",
+        return {"status": "abstain", "answer": f"NOT SURE: found {n} {one} candidate(s) but the count gate is {conf:.2f} < {tau:.2f} (dev-calibrated{'; strict mode' if strict() else ''}).",
                 "value": None, "evidence": [dict(e, verified=False) for e in ev]}
     return _ok(n, f"{n} {one if n == 1 else many} detected on the plan (closed-shape symbol detector + dev-calibrated count gate p={conf:.2f}); each is boxed.", ev)
 

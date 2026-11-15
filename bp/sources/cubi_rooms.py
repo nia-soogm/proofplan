@@ -41,6 +41,10 @@ OTHER = {  # room codes that are not counted, used for coverage features and to 
     "FÖRRÅD", "FRD", "KLK", "KLÄDKAMMARE", "GROVK", "TVÄTT", "ENTRÉ", "HOBBY", "AS", "ASH", "AS.H", "HH", "IK", "TH", "PE",
     "VK", "VARAUS", "ULLAKKO", "AUTOVAJA", "PATIO", "KYLMÄ", "KYLMA", "TILA", "R", "TK", "TUULIK",
 }
+KH = {"KH", "KPH", "KYLPYH", "KYLPYHUONE", "BADRUM", "BDR"}  # bathroom proper (tub or shower)
+PH = {"PH", "PESUH", "PESUHUONE", "PSH", "PESUTILA", "PESUTILAT", "SH", "SUIHKU", "PESU", "DUSCH", "TVÄTTRUM"}  # washroom next to a sauna
+SAUNA_WORD = {"SAUNA", "SAUN", "BASTU", "LOYLYH", "LÖYLYH"}
+NEW_KEYS = ("n_kh", "n_ph", "n_ph_only", "combo_bw", "combo_sb", "n_khh", "sauna_word", "sauna_letter", "src_wash", "eq_wash")
 UNITS = {"M²", "M2", "M", "MZ", "M?", "", "H", "HUONE"}
 SUMMARY_RE = re.compile(r"(?<![\d,.])([1-9])\s*[HhRr]\s*[+\-,.]\s*([A-ZÄÖÅa-zäöå/ +\-,.]+)")
 SUM_PART = {"sauna": {"S", "SA", "SAUNA"}, "kitchen": {"K", "KK", "KT", "TPK", "AVOK", "TUPAK", "KEITTIÖ", "KEITTIO", "KÖK", "KOK", "KV", "KS"},
@@ -117,6 +121,23 @@ def parse_summary(text):
     return {"h": int(m.group(1)), "parts": parts}
 
 
+def codes(t):
+    """Set of room codes in one OCR token ('KH/WC' -> {'KH', 'WC', 'KHWC'})."""
+    c = core(t["text"])
+    return {p.rstrip(".") for p in re.split(r"[/+ ,]+", c) if p} | {c.replace(" ", "")}
+
+
+def code_feats(ex):
+    """Code identity of what was read: KH-type vs PH-type washrooms, combo labels, utility room, sauna word vs single 'S'."""
+    hb, hw, hs = ex["hits"]["bathroom"], ex["hits"]["wc"], ex["hits"]["sauna"]
+    inn = lambda t, L: any(t is u for u in L)
+    ph = [t for t in hb if (codes(t) & PH) and not (codes(t) & KH)]
+    return {"n_kh": sum(1 for t in hb if codes(t) & KH), "n_ph": len(ph), "n_ph_only": len([t for t in ph if not inn(t, hs)]),
+            "combo_bw": sum(1 for t in hb if inn(t, hw)), "combo_sb": sum(1 for t in hb if inn(t, hs)),
+            "n_khh": sum(1 for t in ex["others"] if codes(t) & {"KHH", "KODINH", "KODINHOITOH"}),
+            "sauna_word": sum(1 for t in hs if codes(t) & SAUNA_WORD), "sauna_letter": sum(1 for t in hs if core(t["text"]).replace(" ", "") == "S")}, ph
+
+
 def _h(t):
     return max(1.0, t["bbox"][3] - t["bbox"][1])
 
@@ -168,7 +189,7 @@ def summary_value(kind, s):
     return 1 if s["parts"] & SUM_PART[kind] else 0
 
 
-def candidates(ex, kind, size):
+def candidates(ex, kind, size, use_new=True):
     """-> list of (value, source, features, evidence) where evidence = [(token, label)]. Candidate values: strong label
     count, all-label count (incl. weak single letters), presence (1 if any label: two labels of one kitchen are common),
     and the apartment-type summary value."""
@@ -190,6 +211,9 @@ def candidates(ex, kind, size):
         "n_bed": len(ex["strong"]["bedroom"]), "n_bath": len(ex["strong"]["bathroom"]), "n_kit": len(ex["strong"]["kitchen"]),
         "n_sauna": len(ex["strong"]["sauna"]), "n_wc": len(ex["strong"]["wc"]), "n_bal": len(ex["strong"]["balcony"]),
     }
+    cf, ph = code_feats(ex)
+    if use_new:
+        base.update(cf)
     vals = {}  # value -> (source tags, evidence tokens)
     def add(v, tag, toks):
         tags, ev = vals.setdefault(v, (set(), []))
@@ -205,12 +229,16 @@ def candidates(ex, kind, size):
         add(1, "presence", sorted(allh, key=lambda t: -t["conf"])[:1])
     if sv and s_agree and s_val >= 0:
         add(s_val, "summary", [])
+    if use_new and kind == "sauna" and n_all == 0 and ph:
+        add(1, "washroom", ph[:2])  # a PH / PESUH washroom with no sauna label read: saunas usually adjoin it (dev: 79 %)
     out = []
     for v, (tags, toks) in vals.items():
         f = dict(base, val=v, src_label=int("label" in tags), src_all=int("label_all" in tags), src_pres=int("presence" in tags),
                  src_sum=int("summary" in tags), eq_sum=int(v == s_val), eq_lab=int(v == n_st), eq_all=int(v == n_all),
                  diff_sum=(v - s_val) if sv else -9, diff_lab=v - n_st, diff_all=v - n_all)
-        ev = [(t, kind) for t in toks]
+        if use_new:
+            f.update(src_wash=int("washroom" in tags), eq_wash=int(kind == "sauna" and n_all == 0 and bool(ph) and v == 1))
+        ev = [(t, "washroom (sauna inferred)" if "washroom" in tags and any(t is u for u in ph) else kind) for t in toks]
         if sv and v == s_val:
             ev.append((ex["summ"][0][0], "apartment-type summary"))
         if v == 0 and not ev:
@@ -239,7 +267,7 @@ def answer(path, kind, tokens, size):
     if M is None or kind not in M["models"]:
         return None
     ex = extract(tokens)
-    cs = candidates(ex, kind, size)
+    cs = candidates(ex, kind, size, use_new=M.get("new_feats", False))
     if not cs:
         return ("abstain", None, f"no room labels or apartment-type summary readable for {kind}", [])
     import numpy as np
@@ -247,5 +275,6 @@ def answer(path, kind, tokens, size):
     X = np.array([fvec(f) for _, _, f, _ in cs], float)
     p = m.predict_proba(X)[:, 1]
     i = int(p.argmax()); v, src, f, ev = cs[i]
-    tau = M["tau"][kind]
+    from .calib import tau_for
+    tau = tau_for(M, kind)
     return ("answered" if p[i] >= tau else "abstain", v, src, ev, float(p[i]), float(tau), ex)

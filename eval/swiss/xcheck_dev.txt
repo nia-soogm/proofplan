@@ -1,0 +1,16 @@
+BRAINSTORM #5, Swiss cross-check abstentions. FULL dev split (all Swiss dev questions, area + count).
+Rules: (1) DXF polygon sum vs PDF filled-region sum differs > 1.5 % -> NOT SURE; (2) bathtub-sized drain circles (r~0.025 m, not in a basin/shower tray) > matched bathtub symbols -> NOT SURE; (3) apartment letters with a gap (A..H without F) -> NOT SURE.
+before (cross-checks off)    area   n=  6218 answered=  6218 (100.00%) correct=  6186 precision=99.485% wrong=32
+before (cross-checks off)    count  n= 13204 answered= 13204 (100.00%) correct= 13196 precision=99.939% wrong=8
+before (cross-checks off)    ALL    n= 19422 answered= 19422 (100.00%) correct= 19382 precision=99.794% wrong=40
+after (cross-checks on)      area   n=  6218 answered=  6176 (99.32%) correct=  6168 precision=99.870% wrong=8
+after (cross-checks on)      count  n= 13204 answered= 13196 (99.94%) correct= 13196 precision=100.000% wrong=0
+after (cross-checks on)      ALL    n= 19422 answered= 19372 (99.74%) correct= 19364 precision=99.959% wrong=8
+correct answers turned into NOT SURE: 18 (0.09% of questions); wrong answers turned into NOT SURE: 32; total coverage cost 0.26%
+   ('apartment letters', 'was wrong') 2
+   ('area DXF vs PDF', 'was right') 18
+   ('area DXF vs PDF', 'was wrong') 24
+   ('bathtub', 'was wrong') 6
+Note: in all area abstentions on dev the PDF filled-region sum is within 2 % of the gold (it carries the cut-outs the DXF lacks); not used to answer (abstain only).
+Remaining dev errors: 8 apartment-area questions (4 drawings) where the PDF agrees with the DXF; rooms are assigned to the wrong unit or the gold excludes a room. No independent signal found.
+IFC models: plan-vs-model disagreement (red) occurs on 6 dev answers, all 6 correct (gold = IFC model), 0 errors -> an abstain rule would only lose answers; NOT shipped for IFC.

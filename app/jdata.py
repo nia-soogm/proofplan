@@ -185,9 +185,9 @@ def _size(src, rel):
     return r.width * s, r.height * s
 
 
-def ask(path, question):
+def ask(path, question, strict=False):
     src = path.split("/")[1]
-    r = solve(question, path)
+    r = solve(question, path, strict=strict)
     from urllib.parse import quote
     pdfs = []  # (source folder, relative pdf path); ifc_bench evidence may point at a plan rendered in ifc_models (pdf_src)
     if path.endswith((".pdf", ".png")) and src in ("opening_design", "cubicasa5k"):
@@ -226,5 +226,5 @@ def ask(path, question):
     text = r["answer"] + (f"\nEvidence: {refs}" if n else "")
     if n:
         text += f"\nCross-check: {nv} green (second source agrees), {nb} red (disagrees / not found), {n - nv - nb} unchecked."
-    return {"status": status, "answer": text, "value": r.get("value"), "citations": cites, "sheets": sheets, "engine": "deterministic solver (" + src + ")",
-            "trace": {"solver": src, "check": r.get("check"), "path": path}, "credit": credit(src, Path(path).name)}
+    return {"status": status, "answer": text, "value": r.get("value"), "citations": cites, "sheets": sheets, "engine": "deterministic solver (" + src + (", strict mode" if strict else "") + ")",
+            "trace": {"solver": src, "check": r.get("check"), "path": path, "mode": r.get("mode")}, "credit": credit(src, Path(path).name)}

@@ -264,7 +264,7 @@ def load(model: str) -> dict:
     return d
 
 
-if __name__ == "__main__" and not (len(sys.argv) > 1 and sys.argv[1] == "--units"):
+if __name__ == "__main__" and not (len(sys.argv) > 1 and sys.argv[1] in ("--units", "--check")):
     ms = sys.argv[1:] or sorted(p.stem for p in BENCH_DIR.glob("*.ifc"))
     for m in ms:
         t0 = time.time()
@@ -315,3 +315,125 @@ if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "--units":
             print(m, units(m), flush=True)
         except Exception as e:
             print(m, "FAILED", e, flush=True)
+
+
+# ---------------------------------------------------------------- independent re-derivation facts (phase E self-checks)
+CHECK_VERSION = 1
+CHECK_KINDS = {"door": ("IfcDoor",), "window": ("IfcWindow",), "wall": ("IfcWall",), "column": ("IfcColumn",), "beam": ("IfcBeam",),
+               "slab": ("IfcSlab",), "railing": ("IfcRailing",), "stair": ("IfcStair",), "curtain wall": ("IfcCurtainWall",),
+               "furniture": ("IfcFurnishingElement",), "roof": ("IfcRoof",), "covering": ("IfcCovering",)}
+CHECK_ABSENT = ("IfcLightFixture", "IfcLamp", "IfcSanitaryTerminal", "IfcPipeSegment", "IfcPipeFitting", "IfcDistributionSystem", "IfcSystem",
+                "IfcSpaceHeater", "IfcBoiler", "IfcUnitaryEquipment", "IfcChiller", "IfcCoolingTower", "IfcCoil", "IfcElectricAppliance",
+                "IfcOutlet", "IfcSwitchingDevice", "IfcCableSegment", "IfcElectricDistributionBoard", "IfcCableCarrierSegment",
+                "IfcCableCarrierFitting", "IfcJunctionBox", "IfcElectricDistributionPoint", "IfcFurnishingElement", "IfcCovering", "IfcBeam",
+                "IfcColumn", "IfcFlowTerminal", "IfcDistributionElement", "IfcBuildingElementProxy")
+_FIRE = re.compile(r"fire ?rating|fire ?resist|feuerwiderstand|brandschutz|feuerschutz|brandklasse|brandverhalten", re.I)
+
+
+def extract_check(model: str) -> dict:
+    """Facts for answer self-checks, read straight from the IFC graph with code paths independent of extract():
+    - per kind: instance count by_type (subtypes included), instances grouped by the type object of IfcRelDefinesByType
+      (walked from the relationship side), and by instance Name with a trailing number stripped
+    - per storey: the IfcSpaces reached by walking IfcRelAggregates / IfcRelContainedInSpatialStructure down from the storey,
+      with NetFloorArea / GrossFloorArea read from IfcElementQuantity objects directly (project area unit -> m2)
+    - per door / window / wall: every property (instance or type) whose name mentions fire / Feuer / Brand
+    - counts for the classes the 'absent' template asserts are missing, and the distinct product/type names (for keyword checks)."""
+    import ifcopenshell, ifcopenshell.util.unit as uu
+    f = ifcopenshell.open(str(BENCH_DIR / f"{model}.ifc"))
+    ua = uu.calculate_unit_scale(f, "AREAUNIT") if hasattr(uu, "calculate_unit_scale") else 1.0
+
+    def by_type(c):
+        try:
+            return f.by_type(c)
+        except Exception:
+            return []
+    tobj = {}
+    for r in by_type("IfcRelDefinesByType"):
+        for o in r.RelatedObjects or []:
+            tobj[o.id()] = r.RelatingType.Name
+    kinds = {}
+    for k, cs in CHECK_KINDS.items():
+        els = [e for c in cs for e in by_type(c)]
+        kinds[k] = {"n": len(els), "guids": [e.GlobalId for e in els],
+                    "by_tobj": [tobj.get(e.id()) for e in els],
+                    "by_name": [re.sub(r"[:_\- ]*\d+$", "", (e.Name or "").strip()) or None for e in els]}
+
+    def qarea(s):
+        out = {}
+        for r in getattr(s, "IsDefinedBy", None) or []:
+            if not r.is_a("IfcRelDefinesByProperties"):
+                continue
+            pd = r.RelatingPropertyDefinition
+            if pd.is_a("IfcElementQuantity"):
+                for q in pd.Quantities or []:
+                    if q.is_a("IfcQuantityArea") and q.Name in ("NetFloorArea", "GrossFloorArea"):
+                        out.setdefault(q.Name, float(q.AreaValue) * ua)
+        return out
+
+    def below(o, depth=0):
+        found = []
+        if depth > 6:
+            return found
+        for r in getattr(o, "IsDecomposedBy", None) or []:
+            for c in r.RelatedObjects or []:
+                if c.is_a("IfcSpace"):
+                    found.append(c)
+                found += below(c, depth + 1)
+        for r in getattr(o, "ContainsElements", None) or []:
+            for c in r.RelatedElements or []:
+                if c.is_a("IfcSpace"):
+                    found.append(c)
+        return found
+    storeys = {}
+    for s in by_type("IfcBuildingStorey"):
+        sp = {x.GlobalId: x for x in below(s)}
+        storeys[s.GlobalId] = {"name": s.Name, "spaces": {g: qarea(x) for g, x in sp.items()}}
+    fire = {}
+    for k in ("door", "window", "wall"):
+        for e in [e for c in CHECK_KINDS[k] for e in by_type(c)]:
+            vals = []
+            srcs = [e] + ([r.RelatingType for r in (getattr(e, "IsTypedBy", None) or getattr(e, "IsDefinedBy", None) or [])
+                           if r.is_a("IfcRelDefinesByType")])
+            for o in srcs:
+                psets = list(getattr(o, "HasPropertySets", None) or [])
+                psets += [r.RelatingPropertyDefinition for r in (getattr(o, "IsDefinedBy", None) or []) if r.is_a("IfcRelDefinesByProperties")]
+                for ps in psets:
+                    for p in getattr(ps, "HasProperties", None) or []:
+                        if _FIRE.search(p.Name or "") and p.is_a("IfcPropertySingleValue") and p.NominalValue is not None:
+                            v = str(p.NominalValue.wrappedValue).strip()
+                            if v not in ("", "-", "--") and not isinstance(p.NominalValue.wrappedValue, bool):
+                                vals.append(v)
+            fire[e.GlobalId] = sorted(set(vals))
+    absent = {c: len(by_type(c)) for c in CHECK_ABSENT}
+    names = set()
+    for e in by_type("IfcProduct"):
+        for v in (e.Name, getattr(e, "ObjectType", None), tobj.get(e.id())):
+            if v:
+                names.add(str(v).strip().lower()[:80])
+        if len(names) > 20000:
+            break
+    return {"version": CHECK_VERSION, "kinds": kinds, "storeys": storeys, "fire": fire, "absent": absent, "names": sorted(names)}
+
+
+@functools.lru_cache(maxsize=4)
+def check(model: str) -> dict:
+    import json
+    p = OUT / f"{model}.check.json"
+    if p.exists():
+        d = json.loads(p.read_text())
+        if d.get("version") == CHECK_VERSION:
+            return d
+    d = extract_check(model)
+    OUT.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d))
+    return d
+
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "--check":
+    for m in sys.argv[2:] or sorted(p.stem for p in BENCH_DIR.glob("*.ifc")):
+        t0 = time.time()
+        try:
+            check(m)
+            print(m, "check facts", f"{time.time() - t0:.0f}s", flush=True)
+        except Exception as e:
+            print(m, "FAILED", type(e).__name__, e, flush=True)

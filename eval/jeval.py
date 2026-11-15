@@ -3,7 +3,7 @@
 Split: by DRAWING (md5 of the model/plan id) -> dev (tune on) / test (held out, report). A drawing's questions
 never appear in both. Stratified sample: N per (source, type) family, separately from dev and test.
 Scoring (official): count exact; area/length/volume within 2%; text: lenient token check (ifc_bench: strict eval.ifcb_score).
-Usage: python -m eval.jeval --split test --n 300 [--out eval/results_test.json]
+Usage: python -m eval.jeval --split test --n 300 [--out eval/results_test.json] [--strict] [--only cubicasa5k]
 """
 import argparse, hashlib, json, random, sys, time, collections, re
 from pathlib import Path
@@ -59,6 +59,8 @@ def main():
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--out")
     ap.add_argument("--show-errors", type=int, default=0)
+    ap.add_argument("--strict", action="store_true", help="strict thresholds for the dev-calibrated gates (BRAINSTORM #6)")
+    ap.add_argument("--only", help="comma-separated sources to run, e.g. cubicasa5k,swiss_dwellings")
     a = ap.parse_args()
     fam = collections.defaultdict(list)
     for l in open(Q):
@@ -66,6 +68,8 @@ def main():
         src = q["path"].split("/")[1]
         if src == "cubicasa5k" and not (JDATA / q["path"]).exists():
             continue  # skip images that are not on this box
+        if a.only and src not in a.only.split(","):
+            continue
         if split_of(q["path"]) == a.split:
             fam[(src, q["type"])].append(q)
     rnd = random.Random(a.seed)
@@ -76,12 +80,12 @@ def main():
         src = k[0]
         for q in sample:
             try:
-                r = solve(q["question"], q["path"])
+                r = solve(q["question"], q["path"], strict=a.strict)
             except Exception as e:
                 r = {"status": "error", "value": None, "answer": f"{type(e).__name__}: {e}"}
             rows.append({"family": f"{k[0]}/{k[1]}", "q": q, "status": r["status"], "value": r.get("value"), "ok": ((ifcb_score(q["answer"], r.get("value")) if src == "ifc_bench" else text_correct(q, r.get("value"))) if q["type"] == "text" else correct(q, r.get("value"))) if r["status"] not in ("abstain",) else False,
                          "answer": r["answer"][:200]})
-    print(f"split={a.split}  n_per_family<={a.n}  seconds={time.time() - t0:.0f}")
+    print(f"split={a.split}  n_per_family<={a.n}  mode={'strict' if a.strict else 'normal'}  seconds={time.time() - t0:.0f}")
     print(f"{'family':<28}{'n':>5}{'acc':>8}{'answered':>10}{'acc|ans':>9}{'abstain':>9}")
     tot = collections.Counter()
     for f in sorted({r["family"] for r in rows}):

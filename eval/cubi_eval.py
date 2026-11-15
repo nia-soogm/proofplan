@@ -7,7 +7,10 @@ from eval.jeval import split_of, correct
 
 ap = argparse.ArgumentParser(); ap.add_argument("--split", default="dev"); ap.add_argument("--errors", type=int, default=0)
 ap.add_argument("--min-labels", type=int, default=3); ap.add_argument("--min-conf", type=float, default=0.5)
+ap.add_argument("--strict", action="store_true", help="strict thresholds for the dev-calibrated gates (BRAINSTORM #6)")
 a = ap.parse_args()
+from bp.sources import calib
+calib.set_strict(a.strict)
 st = collections.defaultdict(collections.Counter); errs = []
 for l in open(JDATA / "questions.jsonl"):
     q = json.loads(l)
@@ -22,7 +25,7 @@ for l in open(JDATA / "questions.jsonl"):
         ok = correct(q, r["value"]); s["ok"] += ok; s["ans"] += 1
         if not ok:
             errs.append((k, q["path"].split("/")[-1], q["answer"], r["value"], r["answer"][:120]))
-print(f"split={a.split}")
+print(f"split={a.split}  mode={'strict' if a.strict else 'normal'}")
 print(f"{'kind':<12}{'n':>6}{'acc':>8}{'answered':>10}{'acc|ans':>9}{'abstain':>9}")
 T = collections.Counter()
 for k, s in sorted(st.items(), key=lambda x: str(x[0])):

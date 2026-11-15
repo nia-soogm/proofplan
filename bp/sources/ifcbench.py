@@ -8,6 +8,7 @@ No LLM: questions asking for estimates, judgement, adjacency, routes or design i
 from __future__ import annotations
 import re, collections, math, functools
 from .ifcb_facts import load
+from .ifcb_parse import unconsumed
 
 # ---------------------------------------------------------------- helpers
 
@@ -356,7 +357,9 @@ def h_space_breakdown(m, q):
         a = sum(m.space_area(s) for s in L)
         gs = [m.space_gross(s) for s in L]
         gtxt = f", {_f(sum(gs))} sq m gross" if L and all(gs) and abs(sum(gs) - a) > 0.01 else ""
-        lines += [f"   {m.sname.get(sg, 'No level')}:", f"   - Number of spaces: {len(L)}", f"   - Total area: {_f(a)} sq m{gtxt} ({_pct(a, tot)})"]
+        st_ = next((x for x in m.storeys if x["guid"] == sg), None)
+        el = f" (Elevation: {_f(st_['elev_m'])} m)" if st_ and st_.get("elev_m") is not None else ""
+        lines += [f"   {m.sname.get(sg, 'No level')}{el}:", f"   - Number of spaces: {len(L)}", f"   - Total area: {_f(a)} sq m{gtxt} ({_pct(a, tot)})"]
         if not re.search(r"percent|function", q, re.I) or re.search(r"individual|room area|function", q, re.I):
             for s in sorted(L, key=_skey):
                 lines.append(f"     • {m.space_label(s)} - {m.area_txt(s)}")
@@ -413,6 +416,14 @@ def h_area_by_level(m, q):
         gtxt = f" net / {_f(sum(gs))} sq m gross" if L and all(gs) and abs(sum(gs) - a) > 0.01 else ""
         lines.append(f"   - {m.sname.get(sg, 'No level')}: {_f(a)} sq m{gtxt} ({len(L)} spaces, {_pct(a, tot)})")
     lines.append(f"   Total: {_f(tot)} sq m ({len(sps)} spaces)")
+    sg_ = [(s, next((v.get("GrossFloorArea") for v in s.get("psets", {}).values() if isinstance(v.get("GrossFloorArea"), (int, float))), None))
+           for s in m.storeys]
+    if sg_ and all(a for _, a in sg_):
+        gt = sum(a for _, a in sg_)
+        lines += ["", "   Gross floor area of the building levels (IfcBuildingStorey GrossFloorArea quantity):"]
+        lines += [f"   - {s['name']}: {_f(a)} sq m" for s, a in sg_]
+        lines.append(f"   Total gross: {_f(gt)} sq m; net (spaces) / gross (levels) = {_pct(tot, gt)}")
+        return ok("\n".join(lines), sps + [s for s, _ in sg_])
     return ok("\n".join(lines), sps)
 
 
@@ -535,8 +546,19 @@ def h_types(m, q):
         for k, _ in grouped(items):
             ws = [e for e in items if label(e) == k and e.get("OverallWidth")]
             if ws:
-                w = collections.Counter((round(e["OverallWidth"], 3), round(e.get("OverallHeight") or 0, 3)) for e in ws).most_common(1)[0][0]
+                key = collections.Counter((round(e["OverallWidth"], 3), round(e.get("OverallHeight") or 0, 3)) for e in ws).most_common(1)[0][0]
+                e0 = next(e for e in ws if (round(e["OverallWidth"], 3), round(e.get("OverallHeight") or 0, 3)) == key)
+                w = (e0["OverallWidth"], e0.get("OverallHeight") or 0)  # print the stored value, not a pre-rounded one
                 t += f"\n   - {k}: {_f(w[0])} m x {_f(w[1])} m ({w[0] * 1000:.0f} mm x {w[1] * 1000:.0f} mm)"
+        qd = []  # base quantities (Qto_*BaseQuantities Width/Height) often give the opening size, not the frame size
+        for k, _ in grouped(items):
+            g = [e for e in items if label(e) == k]
+            qs_ = collections.Counter((round(qty(e, "Width") or 0, 4), round(qty(e, "Height") or 0, 4)) for e in g).most_common(1)[0][0]
+            ow = collections.Counter((round(e.get("OverallWidth") or 0, 4), round(e.get("OverallHeight") or 0, 4)) for e in g).most_common(1)[0][0]
+            if all(qs_) and (abs(qs_[0] - ow[0]) > 0.005 or abs(qs_[1] - ow[1]) > 0.005):
+                qd.append(f"\n   - {k}: {_f(qs_[0])} m x {_f(qs_[1])} m ({qs_[0] * 100:.1f} cm x {qs_[1] * 100:.1f} cm)".replace(".0 cm", " cm"))
+        if qd:
+            t += "\n\n   Base-quantity size (Qto Width x Height):" + "".join(qd)
     if len(items) <= 12:
         t += "\n\n   Individual elements:"
         for i, e in enumerate(items, 1):
@@ -571,6 +593,16 @@ def _column_sizes(items):
                 v = qty(e, key)
                 if v:
                     dims.append(f"{key} {v * (1000 if v < 5 else 1):.0f} mm")
+        if not dims and re.search(r"\brund\b|round|circular|\bd\s*=\s*\d", k, re.I):
+            a = qty(g[0], "CrossSectionArea")
+            if a:  # circular profile (type name says round): diameter from the modelled cross-section area
+                d = math.sqrt(4 * a / math.pi)
+                dims.append(f"Diameter {d:.2f} m ({d * 100:.0f} cm), from CrossSectionArea {a:.4f} sq m (circular profile per type name)")
+            else:
+                dn = re.search(r"\bd\s*=\s*(\d{2,3})\b", k)
+                if dn and 10 <= int(dn.group(1)) <= 150:  # no quantities exported: read the size the author put in the type name
+                    d = int(dn.group(1)) / 100
+                    dims.append(f"Diameter {d:.2f} m ({d * 100:.0f} cm), read from the type name 'd={dn.group(1)}' (taken as cm; no cross-section quantity in the model)")
         out.append(f"   - {k}: {', '.join(dims) if dims else 'dimensions in type name'} ({n} columns)")
     return "\n".join(out)
 
@@ -935,10 +967,11 @@ def h_slab_volume2(m, q):
     if len(sl) <= 10:
         lines += ["", "   Individual slabs:"]
         for e, v in zip(sl, main):
-            a = qty(e, "GrossArea", "NetArea")
+            a, na = qty(e, "GrossArea", "NetArea"), qty(e, "NetArea")
             th, src = _thick(e)
             mm = (_mm(th, m.F["unit_l"]) if src == "layers" else th * 1000) if th else None
-            lines.append(f"   - {e.get('name')} ({m.sname.get(e.get('storey'), 'n/a')}): volume {_f(v)} cu m" + (f", area {_f(a)} sq m" if a else "") + (f", thickness {mm:.0f} mm" if mm else ""))
+            atxt = (f", area {_f(a)} sq m" if a else "") + (f" gross / {_f(na)} sq m net" if a and na and abs(na - a) > 0.005 else "")
+            lines.append(f"   - {e.get('name')} ({m.sname.get(e.get('storey'), 'n/a')}): volume {_f(v)} cu m" + atxt + (f", thickness {mm:.0f} mm" if mm else ""))
     return ok("\n".join(lines), sl)
 
 
@@ -1007,7 +1040,9 @@ def h_wall_materials2(m, q):
 def h_ceiling_mat(m, q):
     cv = [e for e in m.cls("IfcCovering") if str(e.get("pt") or e.get("tpt") or "").upper() == "CEILING"]
     if not cv:
-        return neg("Ceiling material information is not available in this model: no IfcCovering elements of type CEILING were found.")
+        allc = m.cls("IfcCovering")
+        return neg("Ceiling material information is not available in this model: no IfcCovering elements of type CEILING were found"
+                   + (f" (the model contains {len(allc)} covering elements of other types)." if allc else " (no IfcCovering elements at all)."), allc)
     mats = collections.Counter(x for e in cv for x in (e.get("mats") or ["(no material)"]))
     return ok("Ceiling coverings: %d\n" % len(cv) + "\n".join(f"   - {k}: {v} coverings" for k, v in mats.most_common()), cv)
 
@@ -1413,10 +1448,18 @@ def _routes(q):
     return out
 
 
-# Dev-tuned gate (fixed before the first test run): templates whose answers matched the gold in < 60 % of >= 3 dev answers
-# abstain instead of answering. Values = (correct, answered) on dev; regenerate with eval/ifcb_eval.py --split dev.
-GATED = {"h_slab_types2": (1, 6), "h_categories": (0, 5), "h_mep_types": (6, 21), "h_space_breakdown": (3, 6), "h_ceiling_mat": (3, 6),
-         "h_slab_volume2": (4, 7)}
+# Leave-one-model-out gate (BRAINSTORM #7), fitted on dev only by eval/ifcb_lomo.py -> ifcb_gate.json.
+# A template answers only if, on the dev models, it matched the reference in >= 75 % of >= 3 answers, and still does so when
+# any single dev model is left out. Templates never answered on dev have no entry and are withheld too.
+def _load_gate():
+    import json
+    from pathlib import Path
+    f = Path(__file__).with_name("ifcb_gate.json")
+    return json.loads(f.read_text())["templates"] if f.exists() else {}
+
+
+GATE = _load_gate()
+GATED = {k for k, v in GATE.items() if not v["release"]}
 
 
 def route(q):
@@ -1468,6 +1511,171 @@ def _boxes(evs):
     return evs
 
 
+# ---------------------------------------------------------------- answer self-checks (phase E)
+# A released answer must survive a re-derivation from the IFC graph by an independent code path (ifcb_facts.check, which
+# walks IfcRelDefinesByType / IfcRelAggregates / IfcElementQuantity / property sets itself), and every reading of the
+# question that the model allows must give the same answer. Otherwise NOT SURE, with the reason. A template without a
+# self-check is never released. Checks were designed from the dev models only.
+_ORD = {"ground": 0, "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6}
+_FIRE_IN_NAME = re.compile(r"\bR?EI ?\d{2,3}\b|\bE ?\d{2,3}\b|\b[FT] ?\d0\b|fire ?rated|feuerhemmend|feuerbeständig|brandschutz", re.I)
+ABSENT_WORDS = {"IfcLightFixture": r"light|lamp|leuchte|luminaire", "IfcSanitaryTerminal": r"sanit|toilet|\bwc\b|lavator|washbasin|waschbecken|sink|urinal|shower|dusche|bathtub|badewanne",
+                "IfcPipeSegment": r"\bpipe|rohr", "IfcDistributionSystem": r"\bsystem\b|hvac|plumbing|sanitär",
+                "IfcSpaceHeater": r"heiz|heater|radiator|boiler|heating", "IfcChiller": r"cool|kühl|chiller",
+                "IfcElectricAppliance": r"electr|elektr|socket|steckdose|outlet|switch|schalter|cable|kabel",
+                "IfcFurniture": r"furni|möbel|chair|stuhl|table|tisch|desk|sofa|bett\b|\bbed\b|schrank|cabinet",
+                "IfcCovering": r"covering|ceiling|decke|bekleidung", "IfcBeam": r"\bbeam|träger|unterzug", "IfcColumn": r"column|stütze|säule"}
+
+
+def _storey_num(text):
+    """Storey index a name or question text states explicitly (ground = 0), or None."""
+    t = (text or "").lower()
+    if re.search(r"\bground\b|\beg\b|erdgeschoss|rez|parterre", t):
+        return 0
+    if re.search(r"basement|cellar|keller|\bug\b|untergeschoss", t):
+        return -1
+    mm = re.search(r"\b(\d+)(?:st|nd|rd|th)?\.?\s*(?:floor|level|storey|story|og|obergeschoss)\b", t) or \
+        re.search(r"\b(?:level|floor|storey|story|og|ebene)\s*(\d+)\b", t)
+    if mm:
+        return int(mm.group(1))
+    mm = re.search(r"\b(first|second|third|fourth|fifth|sixth)\s+(?:floor|level|storey|story)", t)
+    return _ORD[mm.group(1)] if mm else None
+
+
+def _partition(xs):
+    return sorted(collections.Counter(xs).values())
+
+
+def _sc_types(m, q, C):
+    ql = q.lower()
+    kind = None
+    for k, rx in (("curtain wall", r"curtain"), ("door", r"\bdoor"), ("window", r"window"), ("column", r"column"), ("beam", r"\bbeam"),
+                  ("railing", r"railing"), ("stair", r"\bstair"), ("furniture", r"furni"), ("wall", r"\bwall"), ("slab", r"\bslab"),
+                  ("covering", r"covering"), ("roof", r"\broof")):
+        if re.search(rx, ql):
+            kind = k
+            break
+    K = C["kinds"].get(kind)
+    if K is None:
+        return f"no independent count for {kind}s"
+    items = _kind_items(m, kind)
+    if K["n"] != len(items):
+        return f"the IFC holds {K['n']} {kind} instances by class (subtypes included), the fact table {len(items)}"
+    if re.search(r"distribut|by floor|per floor|by level|per level|each floor|each level", ql) and kind != "furniture":
+        return "the question asks for a distribution by floor, which this template does not report"
+    if re.search(r"propert|specification", ql) and kind not in ("column",):
+        return "the question asks for properties/specifications the template does not list"
+    tob = dict(zip(K["guids"], K["by_tobj"])); nam = dict(zip(K["guids"], K["by_name"]))
+    gs = [e["guid"] for e in items]
+    ours = _partition(label(e) for e in items)
+    alts = []
+    if all(tob.get(g) for g in gs):
+        alts.append(("type object (IfcRelDefinesByType)", _partition(tob[g] for g in gs)))
+    else:
+        return "some instances have no type object, so 'type' is not well defined"
+    if all(nam.get(g) for g in gs):
+        alts.append(("instance name", _partition(nam[g] for g in gs)))
+    else:
+        return "some instances have no name, so a grouping by instance name cannot be checked"
+    for nm, p in alts:
+        if p != ours:
+            return (f"grouping by {nm} gives {len(p)} group(s) {p[::-1][:6]} vs {len(ours)} by type label {ours[::-1][:6]}: "
+                    f"'type' is ambiguous in this model")
+    return None
+
+
+def _sc_storey_spaces(m, q, C):
+    s = find_storey(m, q)
+    if s is None:
+        return "no storey resolved"
+    nm = (s["name"] or "").lower()
+    named = len(nm) >= 3 and re.search(r"(?<!\w)" + re.escape(nm) + r"(?!\w)", q.lower())
+    if not named:
+        a, b = _storey_num(q), _storey_num((s["name"] or "") + " " + (s.get("long") or ""))
+        if a is not None and b is not None and a != b:
+            return f"the question asks for storey {a} by position, but the matched storey is named '{s['name']}'"
+    if len([x for x in m.storeys if (x["name"] or "").strip().lower() == nm.strip()]) > 1:
+        return f"several storeys are named '{s['name']}'"
+    cs = C["storeys"].get(s["guid"])
+    if cs is None:
+        return "storey not found when re-reading the IFC"
+    L = _spaces_by_storey(m).get(s["guid"], [])
+    if {x["guid"] for x in L} != set(cs["spaces"]):
+        return (f"the IFC decomposition puts {len(cs['spaces'])} spaces under '{s['name']}', the fact table {len(L)}")
+    for x in L:
+        a = m.space_area(x); qa = cs["spaces"][x["guid"]]
+        ref = [v for v in (qa.get("NetFloorArea"), qa.get("GrossFloorArea")) if v]
+        if a is not None and ref and not any(abs(a - v) <= 0.006 for v in ref):
+            return f"space {x.get('name')}: area {a:.2f} not re-derived from its IfcElementQuantity ({', '.join(f'{v:.2f}' for v in ref)})"
+    return None
+
+
+def _sc_firerating(m, q, C, r):
+    ql = q.lower()
+    kind = "door" if "door" in ql else "window" if "window" in ql else "wall"
+    items = _kind_items(m, kind)
+    ours = {e["guid"]: str(v) for e in items for v in [prop(e, "FireRating", "Fire Rating", "Feuerwiderstandsklasse")] if v not in (None, "", "-", "--")}
+    theirs = {g: v for g, v in C["fire"].items() if v and g in {e["guid"] for e in items}}
+    if set(ours) != set(theirs):
+        return f"an independent property scan finds fire-rating values on {len(theirs)} {kind}s, the template on {len(ours)}"
+    for g, v in ours.items():
+        if v.strip() not in theirs[g]:
+            return f"fire rating '{v}' not confirmed by the property scan ({theirs[g]})"
+    if not ours and any(_FIRE_IN_NAME.search(label(e) + " " + (e.get("name") or "")) for e in items):
+        return f"no fire-rating property, but some {kind} type names state a rating"
+    vals = {v for v in ours.values()}
+    for e in items:
+        mm = _FIRE_IN_NAME.search(label(e))
+        if mm and e["guid"] in ours and mm.group(0).replace(" ", "").upper() not in ours[e["guid"]].replace(" ", "").upper():
+            return f"type name says '{mm.group(0)}' but the property says '{ours[e['guid']]}'"
+    return None
+
+
+def _sc_absent(m, q, C):
+    ql = q.lower()
+    groups = [(r"light fixture|lighting", ("IfcLightFixture", "IfcLamp"), "IfcLightFixture"),
+              (r"sanitary", ("IfcSanitaryTerminal",), "IfcSanitaryTerminal"),
+              (r"\bpip(e|ing)", ("IfcPipeSegment", "IfcPipeFitting"), "IfcPipeSegment"),
+              (r"\bmep systems?\b|\bmep components?\b", ("IfcDistributionSystem", "IfcSystem", "IfcDistributionElement"), "IfcDistributionSystem"),
+              (r"heating", ("IfcSpaceHeater", "IfcBoiler", "IfcUnitaryEquipment"), "IfcSpaceHeater"),
+              (r"cooling", ("IfcChiller", "IfcCoolingTower", "IfcCoil"), "IfcChiller"),
+              (r"electrical", ("IfcElectricAppliance", "IfcOutlet", "IfcSwitchingDevice", "IfcCableSegment", "IfcElectricDistributionBoard",
+                               "IfcCableCarrierSegment", "IfcJunctionBox", "IfcElectricDistributionPoint", "IfcLightFixture"), "IfcElectricAppliance"),
+              (r"furniture", ("IfcFurnishingElement",), "IfcFurniture"), (r"covering", ("IfcCovering",), "IfcCovering"),
+              (r"\bbeams?\b", ("IfcBeam",), "IfcBeam"), (r"\bcolumns?\b", ("IfcColumn",), "IfcColumn")]
+    for rx, classes, wk in groups:
+        if re.search(rx, ql):
+            n = sum(C["absent"].get(c, 0) for c in classes)
+            if n:
+                return f"re-reading the IFC finds {n} element(s) of {', '.join(classes)}"
+            if C["absent"].get("IfcFlowTerminal", 0) and wk in ("IfcSanitaryTerminal", "IfcLightFixture"):
+                return "the model has generic flow terminals that may be such fixtures"
+            hits = [n_ for n_ in C["names"] if re.search(ABSENT_WORDS[wk], n_)]
+            if hits:
+                return f"no such IFC class, but element/type names mention it (e.g. '{hits[0][:40]}')"
+            return None
+    return "the absent-class check does not cover this question"
+
+
+SELF_CHECKS = {"h_types": lambda m, q, C, r: _sc_types(m, q, C), "h_storey_spaces": lambda m, q, C, r: _sc_storey_spaces(m, q, C),
+               "h_firerating": _sc_firerating, "h_absent": lambda m, q, C, r: _sc_absent(m, q, C)}
+
+
+def self_check(m, h, q, r):
+    """None if the answer re-derives, else the reason (-> NOT SURE)."""
+    f = SELF_CHECKS.get(h)
+    if f is None:
+        return "this template has no independent re-derivation check, so it is not released"
+    try:
+        from .ifcb_facts import check
+        C = check(m.model)
+    except Exception as e:
+        return f"could not re-read the IFC for the self-check ({type(e).__name__})"
+    try:
+        return f(m, q, C, r)
+    except Exception as e:
+        return f"self-check failed ({type(e).__name__})"
+
+
 # ---------------------------------------------------------------- entry point
 
 def answer(question, path):
@@ -1480,8 +1688,13 @@ def answer(question, path):
         m = M(model)
     except Exception as e:
         return {"status": "abstain", "value": None, "evidence": [], "answer": f"NOT SURE: could not read {model}.ifc ({type(e).__name__})."}
-    r = None
+    r, skipped = None, []
     for h in hs:
+        if not os.environ.get("IFCB_NO_PARSE"):
+            u = unconsumed(question, h.__name__, m)
+            if u:  # strict parse: the template would ignore part of the question
+                skipped.append((h.__name__, u))
+                continue
         try:
             r = h(m, question)
         except Exception:
@@ -1489,12 +1702,22 @@ def answer(question, path):
         if r:
             break
     if not r:
+        if skipped:
+            words = sorted({w for _, u in skipped for w in u})
+            return {"status": "abstain", "value": None, "evidence": [], "handler_skipped": skipped[0][0],
+                    "answer": "NOT SURE: a template matches this question, but it does not understand the word(s) "
+                              + ", ".join(f"'{w}'" for w in words[:8]) + ", so its answer could be to a broader question."}
         return {"status": "abstain", "value": None, "evidence": [], "answer": "NOT SURE: the model does not hold the data this template needs."}
-    if h.__name__ in GATED and not os.environ.get("IFCB_NO_GATE"):
-        c, n = GATED[h.__name__]
+    gate = GATE.get(h.__name__, {"release": not GATE, "correct": 0, "answered": 0, "why": "never answered on dev"})
+    if not gate["release"] and not os.environ.get("IFCB_NO_GATE"):
         return {"status": "abstain", "value": None, "evidence": _boxes(ev(m, r["ev"]))[:50], "handler": h.__name__,
-                "answer": f"NOT SURE: the model gives an answer for this template, but it matched the reference only {c}/{n} times on dev, "
-                          f"so it is withheld.\nDraft (unverified):\n{r['text'][:1500]}"}
+                "answer": f"NOT SURE: the model gives an answer for this template, but on the dev models it matched the reference "
+                          f"{gate['correct']}/{gate['answered']} times ({gate['why']}), so it is withheld.\nDraft (unverified):\n{r['text'][:1500]}"}
+    if not os.environ.get("IFCB_NO_SELFCHECK"):
+        why = self_check(m, h.__name__, question, r)
+        if why:
+            return {"status": "abstain", "value": None, "evidence": _boxes(ev(m, r["ev"]))[:50], "handler": h.__name__, "selfcheck": why,
+                    "answer": f"NOT SURE: the draft answer failed its self-check: {why}.\nDraft (unverified):\n{r['text'][:1500]}"}
     evs = _boxes(ev(m, r["ev"]))
     if not evs:  # header / project facts: cite the file-level entities
         evs = [{"source": "ifc", "guid": (m.F["project"] or [{}])[0].get("guid"), "kind": "IfcProject", "file": f"{model}.ifc",

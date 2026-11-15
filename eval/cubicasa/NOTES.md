@@ -147,3 +147,41 @@ display text and green cross-check colouring):
 - Answers of 0 rest on absence of a label.
 - Saunas without a text label (bench symbol only) are missed. A brown-pixel bench cue was tried on dev and was too weak.
 - Bedrooms remain the hardest: 29 % answered (886 of 3,098). The gate needs labels or the summary, and the two often disagree when OCR misses an `MH`.
+
+---
+
+## Phase A (2026-11-14): fixtures from room labels, WC-seat fusion, room gate v3 (BRAINSTORM #1–#4, τ rule #6)
+
+Code: `bp/sources/cubi_fix.py` + `scripts/cubi/train_fix.py` (model `bp/models/cubi_fix.pkl`), `bp/sources/calib.py`,
+`cubi_rooms.code_feats` and the washroom → sauna candidate, `scripts/cubi/train_rooms.py` (CP rule is the default; `--point` gives the old rule).
+
+**τ rule.** For every gate trained in this phase, τ is the max-coverage threshold where the one-sided Clopper–Pearson 95 % lower bound on dev
+out-of-fold precision is ≥ 90 %.
+
+**Fixtures.** Candidates are room-label formulas, plus the detector count for WC seats:
+- showers/baths: n_bath, max(1, n_bath), n_bath with a sauna washroom
+- sinks: kitchen + bathrooms + WCs (combo labels once), +1, kitchen + bathrooms
+- WC seats: bathrooms + WCs, max(1, ·), the WC-symbol detector count
+
+Features add the code identity (KH vs PH, combos, KHH), the summary flags, and the detector's gate features. The detector features come
+from stage-1 out-of-fold scores. The gate is a HistGradientBoosting classifier with 5-fold out-of-fold training grouped by image.
+A candidate with no box to show is dropped. "≥ 1" priors with no matching label are kept only with the read room labels as boxes and an
+answer text that says it is a prior.
+
+| kind | dev OOF answered @ precision (LB) | test first run answered @ precision | before |
+|---|---|---|---|
+| shower_bath | 45.4 % @ 91.7 % (90.1 %) — 626 via a bathroom label @ 92.0 %, 345 prior-only @ 91.0 % | 45.3 % @ 94.2 % | 0 % |
+| sink | 23.4 % @ 92.2 % (90.1 %) | 20.8 % @ 91.8 % | 0 % |
+| wc_seat | 49.7 % @ 91.7 % (90.3 %); shipped detector gate under the same rule: 26.2 % @ 92.2 % | 50.0 % @ 92.4 % | 30.6 % @ 91.3 % |
+
+Observed: the shower gate only ever answers 1 and the sink gate only answers 2, so in practice they recognise "simple one-bathroom flat"
+situations. Robust to a different split (10-fold, other seed): 46.4 % / 19.1 % / 46.7 % answered at 91.6 / 92.8 / 92.1 %.
+
+**Room gate v3 (#4).** Code-identity features (KH-type vs PH-type washrooms, combos, KHH, 'SAUNA' word vs single 'S') and a sauna candidate
+"1 when a PH/PESUH washroom is read and no sauna label". Dev OOF under the CP rule:
+- sauna 39.9 % @ 92.2 % → 51.9 % @ 91.9 % (122 washroom-sourced answers @ 96.7 %)
+- all room kinds 51.6 % @ 94.9 % → 55.3 % @ 94.6 % (old features under the same rule: 51.6 % @ 94.9 %)
+
+**Test, first and only run** (`test_firstrun_phaseA.txt`, commit 6f44962): CubiCasa ALL **39.3 %** accuracy, 94.2 % when answering
+(was 29.5 % / 94.6 %). Room kinds 49.2 % / 94.3 % (was 45.8 % / 94.7 %). Sauna 91.7 % at 49.0 % answered (was 36.8 %). The separate-WC room
+kind came out at 89.7 % (was 90.4 %): τ moved 0.88 → 0.87 under the CP rule.

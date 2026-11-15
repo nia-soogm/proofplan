@@ -199,6 +199,12 @@ def _model():
     return pickle.load(open(f, "rb")) if f.exists() else None
 
 
+def _tau(prm):
+    """Point-rule threshold of the detector gate (superseded by cubi_fix for WC seats); it has no strict threshold -> never answers in strict mode."""
+    from .calib import strict
+    return 1.01 if strict() else prm["tau"]
+
+
 def count(path, kind):
     """-> (n, confidence, gate threshold, evidence boxes) or None when there is no model for the kind."""
     M = _model()
@@ -214,7 +220,7 @@ def count(path, kind):
         conf = float(M["gates"][cname].predict_proba(np.array([f], float))[0, 1])
         ev = [{"bbox": [x0, y0, x1, y1], "page": 0, "kind": kind, "text": f"door swing #{i + 1} (arc + leaf, score {sc:.2f})", "verified": None}
               for i, (x0, y0, x1, y1, sc) in enumerate(det[prm["which"]])]
-        return n, conf, prm["tau"], ev
+        return n, conf, _tau(prm), ev
     n, kept, f = gate_feats(path, bx, P, ci, s, nlab, prm["thr"], prm["merge"])
     conf = float(M["gates"][cname].predict_proba(np.array([f], float))[0, 1])
     ev = []
@@ -223,4 +229,4 @@ def count(path, kind):
         pad = int(0.25 * max(x1 - x0, y1 - y0)) + 1
         ev.append({"bbox": [x0 - pad, y0 - pad, x1 + pad, y1 + pad], "page": 0, "kind": kind,
                    "text": f"{NAMES[kind][0]} symbol #{len(ev) + 1} (score {P[i, ci]:.2f})", "verified": None})
-    return n, conf, prm["tau"], ev
+    return n, conf, _tau(prm), ev

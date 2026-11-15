@@ -1,0 +1,16 @@
+# phase B first run, commit 93a0afe: STRICT mode (CP lower bound >= 95% on dev OOF)
+split=test  mode=strict
+kind             n     acc  answered  acc|ans  abstain
+balcony       1492    0.0%         0     0.0%   100.0%
+bathroom      2436   51.0%      1316    94.4%    46.0%
+bedroom       3098    0.0%         0     0.0%   100.0%
+door          3666    0.0%         0     0.0%   100.0%
+kitchen       3386   77.1%      2670    97.8%    21.1%
+sauna         3434   20.5%       724    97.2%    78.9%
+shower_bath   4604   19.1%       896    98.0%    80.5%
+sink          4930    8.3%       430    95.3%    91.3%
+storey        4990   78.8%      4074    96.5%    18.4%
+wc            2340   14.2%       344    96.5%    85.3%
+wc_seat       4984   28.7%      1466    97.5%    70.6%
+window        4990    0.0%         0     0.0%   100.0%
+ALL          44350   26.0%     11920    96.8%    73.1%

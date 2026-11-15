@@ -2,13 +2,15 @@
 import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")  # tiny per-request sklearn predicts: OpenMP pools across request threads oversubscribe the CPU
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from bp import agent
 from bp.tools import Project, list_projects as _all_projects, PROJECTS
-from app import jdata
+from app import jdata, ifc3d
 import os
 
 
@@ -19,6 +21,7 @@ def list_projects():
     return _all_projects()
 
 app = FastAPI(title="ProofPlan")
+app.add_middleware(GZipMiddleware, minimum_size=500)
 STATIC = Path(__file__).parent / "static"
 
 
@@ -78,6 +81,7 @@ def ask(a: Ask):
 class JAsk(BaseModel):
     path: str
     question: str
+    strict: bool = False  # BRAINSTORM #6: strict thresholds for the dev-calibrated gates
 
 
 @app.get("/api/jdata/{src}/files")
@@ -101,4 +105,15 @@ def jpage(src: str, pdf: str):
 def jask(a: JAsk):
     if not a.path.startswith("data/") or a.path.split("/")[1] not in jdata.SOURCES or ".." in a.path:
         raise HTTPException(400, "unsupported path")
-    return jdata.ask(a.path, a.question)
+    return jdata.ask(a.path, a.question, strict=a.strict)
+
+
+@app.get("/api/ifc3d")
+def ifc3d_get(path: str, highlight: Optional[List[str]] = Query(None)):
+    """Tessellated IFC geometry for the 3D evidence view. Highlight GUIDs come from answer citations.
+    Does not compute or change any answer."""
+    return ifc3d.payload(path, highlight or [])
+
+
+# After API routes. Serves vendored three.js and view3d.js (no CDN).
+app.mount("/static", StaticFiles(directory=STATIC), name="static")

@@ -1,0 +1,19 @@
+== bedroom: 1411 dev images asked, 1305 with a candidate; raw top-candidate acc 0.738
+   CP lower bound 0.905
+   chosen tau=0.89: answered 34.3% of asked, precision 92.8% (n=484)
+== bathroom: 1166 dev images asked, 1116 with a candidate; raw top-candidate acc 0.625
+   CP lower bound 0.947
+   chosen tau=0.60: answered 56.6% of asked, precision 96.2% (n=660)
+== wc: 1162 dev images asked, 1118 with a candidate; raw top-candidate acc 0.780
+   CP lower bound 0.901
+   chosen tau=0.87: answered 53.6% of asked, precision 92.1% (n=623)
+== sauna: 1598 dev images asked, 1472 with a candidate; raw top-candidate acc 0.751
+   CP lower bound 0.902
+   chosen tau=0.81: answered 51.9% of asked, precision 91.9% (n=829)
+== kitchen: 1569 dev images asked, 1502 with a candidate; raw top-candidate acc 0.832
+   CP lower bound 0.973
+   chosen tau=0.60: answered 79.9% of asked, precision 98.1% (n=1254)
+== balcony: 716 dev images asked, 664 with a candidate; raw top-candidate acc 0.824
+   CP lower bound 0.902
+   chosen tau=0.90: answered 50.7% of asked, precision 92.8% (n=363)
+ALL room kinds dev OOF: answered 55.3%, precision 94.6%

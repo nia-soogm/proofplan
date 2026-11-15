@@ -29,6 +29,8 @@ details{margin-top:10px;font-size:12px;color:#556} pre{white-space:pre-wrap;font
 .box.conf span{background:#ff8a00} .box.sel span{background:#00b3ff}
 .box.vok{border-color:#16a34a;background:rgba(22,163,74,.10)} .box.vok span{background:#16a34a}
 .box.vbad{border-color:#dc2626;background:rgba(220,38,38,.14)} .box.vbad span{background:#dc2626}
+.box.vnone{border-color:#1f5eff;background:rgba(31,94,255,.10)} .box.vnone span{background:#1f5eff}
+.box.vnone.sel{border-color:#00b3ff;background:rgba(0,179,255,.18)} .box.vnone.sel span{background:#00b3ff}
 .box.poly{background:transparent;border-style:dashed;border-width:1.5px}
 #polys{position:absolute;left:0;top:0;pointer-events:none}
 #polys polygon{fill:rgba(22,163,74,.18);stroke:#16a34a;stroke-width:3} #polys polygon.vbad{fill:rgba(220,38,38,.18);stroke:#dc2626}
@@ -53,7 +55,28 @@ table.acc td.note{color:#667;text-align:left;font-size:11.5px}
 #accmodal{position:fixed;inset:0;background:rgba(20,24,35,.45);z-index:60;display:none;align-items:center;justify-content:center}
 #accmodal .in{background:#f7f8fa;border-radius:10px;padding:18px;max-width:980px;max-height:88vh;overflow:auto}
 .toplinks{font-size:12px;margin-bottom:10px} .toplinks a{color:#1f5eff;cursor:pointer;margin-right:12px}
-</style></head><body>
+
+#view3d{flex:1;display:none;position:relative;min-height:0;background:#2c313a}
+#view3d.on{display:block}
+#v3d-canvas{position:absolute;inset:0}
+#v3d-canvas canvas{display:block;width:100%;height:100%}
+#v3d-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;align-items:center;z-index:2}
+#v3d-tools button{margin:0;padding:5px 10px;font-size:12px;background:#fff;color:#1d2433;border:1px solid #ccd}
+#v3d-tools label{margin:0;padding:5px 8px;font-size:12px;color:#f2f4f7;background:rgba(20,24,32,.55);border-radius:6px;display:flex;gap:5px;align-items:center;user-select:none}
+#v3d-tools button:hover{background:#eef2ff;color:#1f5eff}
+#v3d-status{position:absolute;left:10px;top:10px;z-index:2;color:#e8ecf2;font-size:11px;background:rgba(20,24,32,.55);padding:3px 8px;border-radius:4px;max-width:70%}
+#v3d-info{display:none;position:absolute;left:10px;bottom:10px;z-index:2;background:rgba(255,255,255,.95);color:#1d2433;padding:10px 12px;border-radius:8px;max-width:360px;font-size:12px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+#v3d-info .cls{font-weight:700;color:#1f5eff;font-size:13px}
+#v3d-info .nm{margin:1px 0 8px;color:#334}
+#v3d-info .kv{display:flex;gap:10px;justify-content:space-between;border-top:1px solid #eef;padding:2px 0}
+#v3d-info .kv span{color:#667}
+#v3d-info .kv.used{background:#eef2ff;margin:4px -6px;padding:3px 6px;border-radius:4px;border:0}
+#v3d-info .gid{font:11px/1.3 ui-monospace,monospace;word-break:break-all;text-align:right}
+#v3d-info .note{margin-top:6px;color:#556;font-size:11px}
+#bar .tab.tab3d{background:#1f5eff;color:#fff}
+#bar .tab.tab3d.on{background:#ff8a1f;color:#1d2433}
+</style><script type="importmap">{"imports":{"three":"/static/vendor/three/three.module.min.js"}}</script>
+</head><body>
 <div id="home"><div class="wrap">
   <h1 class="brand">Proof<b>Plan</b></h1>
   <div class="tag">Ask a question about a drawing set. Every answer cites the boxes on the sheet it came from, a second source cross-checks it, and when the evidence is weak it says <i>not sure</i> instead of guessing.</div>
@@ -69,6 +92,7 @@ table.acc td.note{color:#667;text-align:left;font-size:11.5px}
   <select id="file" style="display:none"></select>
   <textarea id="q" placeholder="Ask about the drawings… e.g. How many doors are on the main floor?"></textarea>
   <button id="go">Ask</button>
+  <label id="strictbox" title="Strict mode: the dev-calibrated gates (CubiCasa rooms, fixtures, storeys) answer only where the 95 % Clopper-Pearson lower bound on dev precision is ≥ 95 % (normal: ≥ 90 %). Fewer answers, more NOT SURE. Vector sources (Swiss DXF, IFC) are unaffected." style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#556;margin-left:8px;cursor:pointer"><input type="checkbox" id="strict"> strict mode (precision ≥ 95 % bound)</label>
   <div class="chips" id="chips"></div>
   <div id="answer">—</div>
   <div class="legend" id="legend" style="display:none">Boxes:<i style="background:#16a34a"></i>verified by 2nd source<i style="background:#dc2626"></i>disagrees / not found<i style="background:#1f5eff"></i>unchecked</div>
@@ -78,21 +102,27 @@ table.acc td.note{color:#667;text-align:left;font-size:11.5px}
 <div id="right">
   <div id="bar"><span id="tabs"></span><span id="zoomctl"><button id="zo">−</button> <button id="fit">fit</button> <button id="zi">+</button></span></div>
   <div id="viewport"><div id="sheet"><img id="img"><svg id="polys"></svg></div></div>
+  <div id="view3d">
+    <div id="v3d-canvas"></div>
+    <div id="v3d-status"></div>
+    <div id="v3d-tools"><label id="v3d-storey-wrap" style="display:none"><input type="checkbox" id="v3d-storey" checked> Cited storey only</label><button type="button" id="v3d-fit-hl">Fit to highlighted</button><button type="button" id="v3d-fit-all">Fit all</button></div>
+    <div id="v3d-info"></div>
+  </div>
   <div id="credit"></div>
 </div>
 <script>
 const $=s=>document.querySelector(s);
-let projects=[],sheets=[],cites=[],curPage=null,zoom=0.4,sel=null;
+let projects=[],sheets=[],cites=[],curPage=null,zoom=0.4,sel=null,viewMode='2d',bootQ=null;
 let ACC=null;
 const pct=v=>v==null?'—':v.toFixed(1)+'%';
 function accHTML(){
   if(!ACC) return '';
   const rows=ACC.rows.map(r=>`<tr><td>${r.family}</td><td>${r.n}</td><td>${r.first_acc==null?'—':pct(r.first_acc)+(r.first_n&&r.first_n!=r.n?` <span class=muted>(n=${r.first_n})</span>`:'')}</td><td>${pct(r.acc)}</td><td>${pct(r.acc_ans)}</td><td>${pct(r.abstain)}</td><td class="note">${r.note}</td></tr>`).join('');
-  const kinds=ACC.cubicasa_kinds.map(k=>`<tr><td>${k.kind}</td><td>${k.n}</td><td>${pct(k.acc)}</td><td>${k.answered}</td><td>${pct(k.acc_ans)}</td><td>${pct(k.abstain)}</td></tr>`).join('');
+  const kinds=ACC.cubicasa_kinds.map(k=>`<tr><td>${k.kind}</td><td>${k.n}</td><td>${pct(k.acc)}</td><td>${k.answered}</td><td>${pct(k.acc_ans)}</td><td>${pct(k.abstain)}</td><td>${k.strict&&k.strict.answered?pct(k.strict.acc)+' / '+pct(k.strict.acc_ans):'—'}</td></tr>`).join('');
   return `<div class="muted">Split by drawing (IFC by model, Swiss by plan, CubiCasa by image, OpeningDesign by project). <b>First run</b> = first contact with the held-out split; <b>current</b> may be optimistic where test errors informed fixes. Accuracy counts an abstention as wrong; <b>acc | answered</b> is precision when ProofPlan does answer.</div>
   <table class="acc"><tr><th>family</th><th>n</th><th>first run</th><th>current</th><th>acc | answered</th><th>abstain</th><th>note</th></tr>${rows}</table>
   <h3 style="margin:18px 0 0;font-size:14px">CubiCasa5K per question kind (CPU only, no key; first and only test run of the current method)</h3>
-  <table class="acc"><tr><th>kind</th><th>n</th><th>acc</th><th>answered</th><th>acc | answered</th><th>abstain</th></tr>${kinds}</table>
+  <table class="acc"><tr><th>kind</th><th>n</th><th>acc</th><th>answered</th><th>acc | answered</th><th>abstain</th><th>strict mode: acc / acc | answered</th></tr>${kinds}</table>
   ${ACC.cubicasa_rooms?`<div class="muted">Room kinds together: answered ${pct(100-ACC.cubicasa_rooms.first_run.abstain)} at ${pct(ACC.cubicasa_rooms.first_run.acc_ans)} precision (phase 1 rules: ${pct(100-ACC.cubicasa_rooms.phase1_first_run.abstain)} at ${pct(ACC.cubicasa_rooms.phase1_first_run.acc_ans)}).</div>`:''}`;
 }
 function showAcc(){ $('#acctab2').innerHTML=accHTML(); $('#accmodal').style.display='flex'; }
@@ -120,8 +150,16 @@ const isJ=()=>$('#project').value.startsWith('jd:');
 async function loadProject(){
   const name=$('#project').value;
   if(name.startsWith('jd:')){ jsrc=name.slice(3); jfiles=await (await fetch(`/api/jdata/${jsrc}/files`)).json();
+    const u=new URLSearchParams(location.search);
+    const wp=u.get('path');
+    if(wp && wp.startsWith('data/'+jsrc+'/') && !jfiles.some(f=>f.path===wp)){
+      const nm=wp.split('/').pop().replace(/\.[^.]+$/,'');
+      jfiles=[...jfiles, {path:wp, name:nm, split:'', credit:'', samples:[]}];
+    }
     $('#file').style.display=''; $('#file').innerHTML=jfiles.map((f,i)=>`<option value="${i}">${f.name}${f.split?' · '+f.split:''}</option>`).join('');
-    const wf=new URLSearchParams(location.search).get('f'); if(wf){const i=jfiles.findIndex(f=>f.name==wf); if(i>=0) $('#file').value=i;}
+    const wf=u.get('f'); if(wf){const i=jfiles.findIndex(f=>f.name==wf || f.path.endsWith('/'+wf) || f.path.split('/').pop()===wf); if(i>=0) $('#file').value=i;}
+    if(wp){const i=jfiles.findIndex(f=>f.path===wp); if(i>=0) $('#file').value=i;}
+    bootQ=bootQ || u.get('q');
     return loadFile(); }
   $('#file').style.display='none'; $('#credit').textContent=''; $('#legend').style.display='none';
   sheets=await (await fetch(`/api/project/${name}/sheets`)).json();
@@ -131,7 +169,7 @@ async function loadProject(){
   cites=[]; renderTabs(); const plan=sheets.find(s=>s.level)||sheets[0]; showPage(plan.page);
 }
 async function loadFile(){
-  const f=jfiles[+$('#file').value]; cites=[]; sel=null;
+  const f=jfiles[+$('#file').value]; cites=[]; sel=null; viewMode='2d'; $('#view3d').classList.remove('on'); $('#viewport').style.display=''; $('#zoomctl').style.visibility='';
   $('#chips').innerHTML=f.samples.map(s=>`<span class="chip" data-q="${s.q.replace(/"/g,'&quot;')}">${s.q} <span class="gold">· gold ${s.gold}</span></span>`).join('');
   document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{$('#q').value=c.dataset.q;ask()});
   const deep=['opening_design','cubicasa5k'].includes(jsrc);
@@ -140,13 +178,33 @@ async function loadFile(){
   const W=f.width||img.naturalWidth, H=f.height||img.naturalHeight;
   sheets=[{page:0,sheet:f.name.split('_plan-').pop().slice(0,44),title:'',level:true,width:W,height:H,url:img.src,credit:f.credit}];
   $('#answer').textContent='—'; $('#evlist').innerHTML=''; $('#legend').style.display='none'; showPage(0,()=>fit());
+  if(bootQ){ const q=bootQ; bootQ=null; $('#q').value=q; await ask();
+    if(new URLSearchParams(location.search).get('view')==='3d') open3d(); }
+}
+function isIfcSource(){ return isJ() && (jsrc==='ifc_models' || jsrc==='ifc_bench' || (cites||[]).some(c=>c.guid)); }
+function currentJPath(){ if(!isJ()||!jfiles.length) return null; const f=jfiles[+$('#file').value]; return f && f.path; }
+function when3d(fn){ if(window.View3D) fn(); else window.addEventListener('view3d-ready', fn, {once:true}); }
+function open3d(){
+  viewMode='3d'; $('#view3d').classList.add('on'); $('#viewport').style.display='none'; $('#zoomctl').style.visibility='hidden';
+  renderTabs();
+  when3d(()=>{ window.View3D.setVisible(true); window.View3D.show({path: currentJPath(), citations: cites}); });
+}
+function open2d(pg){
+  viewMode='2d'; $('#view3d').classList.remove('on'); $('#viewport').style.display=''; $('#zoomctl').style.visibility='';
+  when3d(()=>window.View3D && window.View3D.setVisible(false));
+  if(pg!=null) showPage(pg); else renderTabs();
 }
 function renderTabs(){
-  const pages=[...new Set(cites.map(c=>c.page))];
+  const pages=[...new Set(cites.map(c=>c.page).filter(p=>p!=null))];
   const show=pages.length?pages:sheets.filter(s=>s.level).map(s=>s.page);
-  $('#tabs').innerHTML=show.map(pg=>{const s=sheets.find(x=>x.page==pg);const n=cites.filter(c=>c.page==pg).length;
-    return `<span class="tab ${pg==curPage?'on':''}" data-p="${pg}">${s.sheet} ${s.title?'· '+s.title.slice(0,28):''}${n?' ('+n+')':''}</span>`}).join(' ');
-  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showPage(+t.dataset.p));
+  let html=show.map(pg=>{const s=sheets.find(x=>x.page==pg)||{sheet:'sheet',title:''};const n=cites.filter(c=>c.page==pg).length;
+    return `<span class="tab ${viewMode==='2d'&&pg==curPage?'on':''}" data-p="${pg}">${s.sheet} ${s.title?'· '+s.title.slice(0,28):''}${n?' ('+n+')':''}</span>`}).join(' ');
+  if(isIfcSource()){ const n=cites.filter(c=>c.guid).length;
+    html+=` <span class="tab tab3d ${viewMode==='3d'?'on':''}" data-v="3d">3D${n?' ('+n+')':''}</span>`; }
+  $('#tabs').innerHTML=html;
+  document.querySelectorAll('#tabs .tab').forEach(t=>{
+    t.onclick=()=>{ if(t.dataset.v==='3d') open3d(); else open2d(+t.dataset.p); };
+  });
 }
 function showPage(pg,cb){
   const name=$('#project').value; curPage=pg; const s=sheets.find(x=>x.page==pg);
@@ -163,7 +221,8 @@ function drawBoxes(){
     pg.setAttribute('class',vc(c)+(sel==c.ref?' sel':'')); svg.appendChild(pg); }
   for(const c of cites.filter(c=>c.page==curPage&&c.bbox)){
     const [x0,y0,x1,y1]=c.bbox, pad=3, d=document.createElement('div');
-    d.className='box'+(c.conflict?' conf':'')+(c.verified===true?' vok':c.verified===false?' vbad':'')+(c.poly?' poly':'')+(sel==c.ref?' sel':''); d.id='box'+c.ref;
+    // dataset answers: unchecked (verified null/absent) boxes are blue, matching the legend; legacy projects keep the red cite style
+    d.className='box'+(c.conflict?' conf':'')+(c.verified===true?' vok':c.verified===false?' vbad':isJ()?' vnone':'')+(c.poly?' poly':'')+(sel==c.ref?' sel':''); d.id='box'+c.ref;
     Object.assign(d.style,{left:(x0-pad)+'px',top:(y0-pad)+'px',width:(x1-x0+2*pad)+'px',height:(y1-y0+2*pad)+'px'});
     d.innerHTML=`<span>${c.ref}</span>`; d.title=c.text; d.onclick=()=>focusCite(c.ref,false); $('#sheet').appendChild(d);
   }
@@ -179,15 +238,17 @@ function fit(){const s=sheets.find(x=>x.page==curPage),vp=$('#viewport');setZoom
 $('#zi').onclick=()=>setZoom(zoom*1.4); $('#zo').onclick=()=>setZoom(zoom/1.4); $('#fit').onclick=fit;
 function focusCite(ref,center=true){
   const c=cites.find(c=>c.ref==ref); if(!c) return; sel=ref;
-  if(c.page==null){ document.querySelectorAll('.ev').forEach(e=>e.classList.toggle('sel',+e.dataset.r==ref)); return; }
   document.querySelectorAll('.ev').forEach(e=>e.classList.toggle('sel',+e.dataset.r==ref));
+  if(viewMode==='3d' && c.guid && window.View3D){ window.View3D.select(c.guid); return; }
+  if(c.page==null){ return; }
   const go=()=>{drawBoxes(); if(!center) return; setZoom(1.6,false); const vp=$('#viewport'),[x0,y0,x1,y1]=c.bbox;
     vp.scrollLeft=((x0+x1)/2)*zoom-vp.clientWidth/2; vp.scrollTop=((y0+y1)/2)*zoom-vp.clientHeight/2;};
   if(c.page!=curPage) showPage(c.page,go); else go();
 }
+function focusCiteFrom3d(ref){ const keep=viewMode; focusCite(ref,false); viewMode=keep; }
 async function ask(){
   const q=$('#q').value.trim(); if(!q) return; $('#answer').textContent='Thinking…'; $('#answer').className='';
-  const r=isJ()?await (await fetch('/api/jask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({path:jfiles[+$('#file').value].path,question:q})})).json()
+  const r=isJ()?await (await fetch('/api/jask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({path:jfiles[+$('#file').value].path,question:q,strict:$('#strict').checked})})).json()
               :await (await fetch('/api/ask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({project:$('#project').value,question:q})})).json();
   cites=r.citations; sel=null; if(r.sheets&&r.sheets.length) sheets=r.sheets; $('#legend').style.display=isJ()?'':'none';
   const ch=[...document.querySelectorAll('.chip')].find(c=>c.dataset.q==q); if(ch) r.answer+=`\n\nGold (dataset): ${ch.querySelector('.gold').textContent.replace('· gold ','')}`;
@@ -198,8 +259,21 @@ async function ask(){
   document.querySelectorAll('.ev').forEach(e=>e.onclick=()=>focusCite(+e.dataset.r));
   $('#trace').textContent=JSON.stringify(r.trace,null,1);
   const fc=cites.find(c=>c.page!=null);
-  if(fc){ showPage(fc.page,()=>{fit()}); } else if(isJ()){ showPage(0,()=>fit()); } else { renderTabs(); drawBoxes(); }
+  if(viewMode==='3d' && isIfcSource()){ renderTabs(); when3d(()=>window.View3D.show({path: currentJPath(), citations: cites})); }
+  else if(fc){ showPage(fc.page,()=>{fit()}); } else if(isJ()){ showPage(0,()=>fit()); } else { renderTabs(); drawBoxes(); }
 }
 $('#go').onclick=ask; $('#q').addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();ask()}});
 init();
-</script></body></html>
+</script>
+<script type="module">
+import * as View3D from "/static/view3d.js";
+window.View3D = View3D;
+View3D.mount(document.getElementById("view3d"), {
+  onSelect(guid){
+    const c = (cites||[]).find(x=>x.guid===guid);
+    if(c){ sel=c.ref; document.querySelectorAll('.ev').forEach(e=>e.classList.toggle('sel', +e.dataset.r===c.ref)); }
+  }
+});
+window.dispatchEvent(new Event("view3d-ready"));
+</script>
+</body></html>

@@ -51,3 +51,15 @@ def test_candidates_carry_evidence():
     assert 2 in cs and "label" in cs[2][0] and "summary" in cs[2][0] and len(cs[2][1]) == 3
     cs = {v: (src, ev) for v, src, f, ev in R.candidates(ex, "wc", (800, 600))}
     assert 0 in cs and all(ev for _, ev in cs.values())
+
+
+def test_washroom_implies_sauna_candidate():
+    toks = [{"text": "PH", "conf": 0.9, "bbox": [10, 10, 30, 22]}, {"text": "MH", "conf": 0.9, "bbox": [300, 10, 320, 22]},
+            {"text": "KHH", "conf": 0.9, "bbox": [500, 10, 530, 22]}]
+    ex = R.extract(toks)
+    cf, ph = R.code_feats(ex)
+    assert cf["n_ph"] == 1 and cf["n_kh"] == 0 and cf["n_khh"] == 1 and len(ph) == 1
+    cs = {v: (src, f, ev) for v, src, f, ev in R.candidates(ex, "sauna", (800, 600))}
+    assert 1 in cs and "washroom" in cs[1][0] and cs[1][1]["src_wash"] == 1 and cs[1][2][0][1].startswith("washroom")
+    old = {v: src for v, src, f, ev in R.candidates(ex, "sauna", (800, 600), use_new=False)}
+    assert 1 not in old  # the old gate had no such candidate

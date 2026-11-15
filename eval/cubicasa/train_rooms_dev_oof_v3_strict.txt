@@ -1,0 +1,26 @@
+== bedroom: 1411 dev images asked, 1305 with a candidate; raw top-candidate acc 0.738
+   CP lower bound 0.905
+   chosen tau=0.89: answered 34.3% of asked, precision 92.8% (n=484)
+   strict (LB >= 95%): tau=1.01 answered 0.0% precision 0.0% (LB 0.000, n=0)
+== bathroom: 1166 dev images asked, 1116 with a candidate; raw top-candidate acc 0.625
+   CP lower bound 0.947
+   chosen tau=0.60: answered 56.6% of asked, precision 96.2% (n=660)
+   strict (LB >= 95%): tau=0.66 answered 55.8% precision 96.5% (LB 0.950, n=651)
+== wc: 1162 dev images asked, 1118 with a candidate; raw top-candidate acc 0.780
+   CP lower bound 0.901
+   chosen tau=0.87: answered 53.6% of asked, precision 92.1% (n=623)
+   strict (LB >= 95%): tau=0.97 answered 17.5% precision 98.0% (LB 0.955, n=203)
+== sauna: 1598 dev images asked, 1472 with a candidate; raw top-candidate acc 0.751
+   CP lower bound 0.902
+   chosen tau=0.81: answered 51.9% of asked, precision 91.9% (n=829)
+   strict (LB >= 95%): tau=0.96 answered 22.5% precision 97.2% (LB 0.953, n=359)
+== kitchen: 1569 dev images asked, 1502 with a candidate; raw top-candidate acc 0.832
+   CP lower bound 0.973
+   chosen tau=0.60: answered 79.9% of asked, precision 98.1% (n=1254)
+   strict (LB >= 95%): tau=0.60 answered 79.9% precision 98.1% (LB 0.973, n=1254)
+== balcony: 716 dev images asked, 664 with a candidate; raw top-candidate acc 0.824
+   CP lower bound 0.902
+   chosen tau=0.90: answered 50.7% of asked, precision 92.8% (n=363)
+   strict (LB >= 95%): tau=1.01 answered 0.0% precision 0.0% (LB 0.000, n=0)
+ALL room kinds dev OOF: answered 55.3%, precision 94.6%
+ALL room kinds dev OOF, strict: answered 32.4%, precision 97.5%

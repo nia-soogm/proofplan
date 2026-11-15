@@ -1,0 +1,16 @@
+# phase B first run, commit 93a0afe: CP-rule storey gate; other gates unchanged from phase A
+split=test  mode=normal
+kind             n     acc  answered  acc|ans  abstain
+balcony       1492   46.1%       720    95.6%    51.7%
+bathroom      2436   51.5%      1334    94.0%    45.2%
+bedroom       3098   28.5%       936    94.4%    69.8%
+door          3666    0.0%         0     0.0%   100.0%
+kitchen       3386   77.1%      2670    97.8%    21.1%
+sauna         3434   45.0%      1684    91.7%    51.0%
+shower_bath   4604   42.7%      2086    94.2%    54.7%
+sink          4930   19.1%      1026    91.8%    79.2%
+storey        4990   88.3%      4686    94.0%     6.1%
+wc            2340   42.2%      1102    89.7%    52.9%
+wc_seat       4984   46.2%      2494    92.4%    50.0%
+window        4990    0.0%         0     0.0%   100.0%
+ALL          44350   39.7%     18738    93.9%    57.7%

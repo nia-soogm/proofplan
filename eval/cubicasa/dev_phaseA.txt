@@ -1,0 +1,36 @@
+libpng warning: iCCP: profile 'ICC Profile': 'GRAY': Gray color space not permitted on RGB PNG
+libpng warning: iCCP: profile 'ICC Profile': 'GRAY': Gray color space not permitted on RGB PNG
+libpng warning: iCCP: profile 'ICC Profile': 'desc': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'wtpt': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'bkpt': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'rXYZ': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'gXYZ': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'bXYZ': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'dmnd': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'dmdd': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'vued': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'view': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'lumi': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'meas': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'tech': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'rTRC': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'gTRC': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'bTRC': ICC profile tag start not a multiple of 4
+libpng warning: iCCP: profile 'ICC Profile': 'GRAY': Gray color space not permitted on RGB PNG
+libpng warning: iCCP: profile 'ICC Profile': 'GRAY': Gray color space not permitted on RGB PNG
+libpng warning: iCCP: profile 'ICC Profile': 'CMYK': invalid ICC profile color space
+split=dev
+kind             n     acc  answered  acc|ans  abstain
+balcony       1432   51.7%       740   100.0%    48.3%
+bathroom      2332   56.8%      1340    98.8%    42.5%
+bedroom       2822   34.9%       986   100.0%    65.1%
+door          3372    0.0%         0     0.0%   100.0%
+kitchen       3138   79.0%      2504    99.0%    20.2%
+sauna         3196   50.2%      1642    97.7%    48.6%
+shower_bath   4280   44.3%      1936    97.8%    54.8%
+sink          4520   23.7%      1110    96.4%    75.4%
+storey        4584   89.0%      4088    99.9%    10.8%
+wc            2324   54.3%      1270    99.4%    45.4%
+wc_seat       4580   51.6%      2456    96.2%    46.4%
+window        4584    0.0%         0     0.0%   100.0%
+ALL          41164   43.3%     18072    98.5%    56.1%

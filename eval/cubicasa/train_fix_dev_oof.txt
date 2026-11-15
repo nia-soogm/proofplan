@@ -1,0 +1,14 @@
+baseline wc_seat detector gate (OOF): raw exact 0.451; at shipped tau 0.76: answered 0.287 prec 0.916 LB 0.896; CP rule: {'tau': 0.79, 'answered': 0.26200873362445415, 'precision': 0.9216666666666666, 'lower': 0.9011971832871545, 'n': 600}
+== shower_bath: asked 2140, with candidates 1971, top-1 acc 0.740 (of asked 0.681)
+   answered via matching room label(s) in evidence: 626 (92.0% right)
+   answered via prior only (no matching label, no detector): 345 (91.0% right)
+   CP rule: tau=0.84 answered 45.4% precision 91.7% (LB 90.1%, n=971); target answered > 25.0% -> SHIP
+== sink: asked 2260, with candidates 2092, top-1 acc 0.521 (of asked 0.482)
+   answered via matching room label(s) in evidence: 529 (92.2% right)
+   CP rule: tau=0.79 answered 23.4% precision 92.2% (LB 90.1%, n=529); target answered > 8.0% -> SHIP
+== wc_seat: asked 2290, with candidates 2208, top-1 acc 0.711 (of asked 0.686)
+   answered via matching room label(s) in evidence: 694 (92.9% right)
+   answered via detector count: 739 (92.6% right)
+   answered via prior only (no matching label, no detector): 152 (88.8% right)
+   CP rule: tau=0.74 answered 49.7% precision 91.7% (LB 90.3%, n=1137); target answered > 26.2% -> SHIP
+saved bp/models/cubi_fix.pkl {'shower_bath': True, 'sink': True, 'wc_seat': True}

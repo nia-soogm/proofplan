@@ -1,0 +1,14 @@
+BRAINSTORM #5 Swiss cross-checks: held-out TEST first run (full test split), commit 93a0afe
+before (cross-checks off) area   n=  5798 answered=  5798 (100.00%) correct=  5776 acc=99.62% precision=99.621% wrong=22
+before (cross-checks off) count  n= 12364 answered= 12364 (100.00%) correct= 12362 acc=99.98% precision=99.984% wrong=2
+before (cross-checks off) ALL    n= 18162 answered= 18162 (100.00%) correct= 18138 acc=99.87% precision=99.868% wrong=24
+after  (cross-checks on)  area   n=  5798 answered=  5766 (99.45%) correct=  5764 acc=99.41% precision=99.965% wrong=2
+after  (cross-checks on)  count  n= 12364 answered= 12364 (100.00%) correct= 12362 acc=99.98% precision=99.984% wrong=2
+after  (cross-checks on)  ALL    n= 18162 answered= 18130 (99.82%) correct= 18126 acc=99.80% precision=99.978% wrong=4
+correct -> NOT SURE: 12 (0.07%); wrong -> NOT SURE: 20; coverage cost 0.18%
+   ('area DXF vs PDF', 'was right') 12
+   ('area DXF vs PDF', 'was wrong') 20
+still wrong: site2263_bldg3257_floor14384.pdf | What is the net floor area of apartment A in m², summing all | gold 93.89 | got 58.51 | 58.51 m² = sum of 4 rooms of apartment A; PDF fill area 58.51 m² agrees (Δ 0.0%).
+still wrong: site2263_bldg3257_floor14384.pdf | Wie gross ist die Nettowohnfläche von Wohnung A in m² (Summe | gold 93.89 | got 58.51 | 58.51 m² = sum of 4 rooms of apartment A; PDF fill area 58.51 m² agrees (Δ 0.0%).
+still wrong: site1124_bldg2267_floor10438.pdf | How many apartments (residential units) are shown on this fl | gold 6 | got 5 | 5 apartments (unit outlines B, C, D, E, F).
+still wrong: site1124_bldg2267_floor10438.pdf | Wie viele Wohnungen sind auf diesem Grundriss dargestellt? | gold 6 | got 5 | 5 apartments (unit outlines B, C, D, E, F).

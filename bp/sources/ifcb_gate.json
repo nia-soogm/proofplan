@@ -1,0 +1,240 @@
+{
+ "rule": ">= 90% of >= 5 dev answers (after self-checks), robust to leaving out any one dev model or model group",
+ "fitted_on": "dev split, 11 models",
+ "templates": {
+  "h_types": {
+   "release": true,
+   "correct": 37,
+   "answered": 37,
+   "why": "37/37, >= 90% with any one dev model or model group left out"
+  },
+  "h_storey_spaces": {
+   "release": true,
+   "correct": 20,
+   "answered": 20,
+   "why": "20/20, >= 90% with any one dev model or model group left out"
+  },
+  "h_absent": {
+   "release": true,
+   "correct": 13,
+   "answered": 13,
+   "why": "13/13, >= 90% with any one dev model or model group left out"
+  },
+  "h_firerating": {
+   "release": true,
+   "correct": 11,
+   "answered": 12,
+   "why": "11/12, >= 90% with any one dev model or model group left out"
+  },
+  "h_area_by_level": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_building": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_categories": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_ceiling_mat": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_count": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_coverings": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_doors_windows": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_extreme_width": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_footprint": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_furniture_in_space": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_guid_dims": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_largest_room": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_levels": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_loadbearing": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_mep_length": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_mep_types": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_metrics": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_named_room": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_phases": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_project": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_room_kind": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_room_lookup": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_room_types": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_sanitary_types": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_slab_types2": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_slab_volume2": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_software": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_space_breakdown": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_struct_summary": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_tallest": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_vertical": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_wall_envelope": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_wall_length": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_wall_materials2": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  },
+  "h_wall_thick": {
+   "release": false,
+   "correct": 0,
+   "answered": 0,
+   "why": "no self-check (not re-derivable independently)"
+  }
+ }
+}
